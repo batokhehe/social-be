@@ -39,7 +39,9 @@ func main() {
 
 	cache.Init()
 	logger.Init()
-	defer logger.Log.Sync()
+	defer func() {
+		_ = logger.Log.Sync()
+	}()
 
 	_, err := cache.RDB.Ping(cache.Ctx).Result()
 	if err != nil {
@@ -64,6 +66,7 @@ func main() {
 	r.Use(middleware.LoggerMiddleware())
 	r.Use(middleware.ErrorMiddleware())
 	r.Use(cors.Default())
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/health/live", middleware.LivenessHandler)
 	r.GET("/health/ready", middleware.ReadinessHandler)
