@@ -1,9 +1,11 @@
 package config
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -18,5 +20,21 @@ func InitDB() (*sql.DB, error) {
 		os.Getenv("DB_NAME"),
 	)
 
-	return sql.Open("postgres", connStr)
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	if err := db.PingContext(pingCtx); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

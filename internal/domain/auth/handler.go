@@ -22,6 +22,22 @@ type Handler struct {
 
 var validate = validator.New()
 
+func bindAndValidate(c *gin.Context, req interface{}) bool {
+	if err := c.ShouldBindJSON(req); err != nil {
+		logger.Log.Error("invalid request body", zap.Error(err))
+		response.Error(c, "REQ_001", "invalid request body")
+		return false
+	}
+
+	if err := validate.Struct(req); err != nil {
+		logger.Log.Warn("validation failed", zap.Error(err))
+		response.Error(c, "REQ_002", "validation failed")
+		return false
+	}
+
+	return true
+}
+
 // Register godoc
 // @Summary Register user
 // @Description Register new user
@@ -34,17 +50,7 @@ var validate = validator.New()
 func (h *Handler) Register(c *gin.Context) {
 	var req user.RegisterRequest
 
-	// 🔹 Bind JSON
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Error("invalid register request", zap.Error(err))
-		response.Error(c, "REQ_001", "invalid request body")
-		return
-	}
-
-	// 🔹 Validate
-	if err := validate.Struct(req); err != nil {
-		logger.Log.Warn("validation failed", zap.Error(err))
-		response.Error(c, "REQ_002", "validation failed")
+	if ok := bindAndValidate(c, &req); !ok {
 		return
 	}
 
@@ -74,17 +80,7 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 
-	// 🔹 Bind JSON
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Error("invalid login request", zap.Error(err))
-		response.Error(c, "REQ_001", "invalid request body")
-		return
-	}
-
-	// 🔹 Validate
-	if err := validate.Struct(req); err != nil {
-		logger.Log.Warn("login validation failed", zap.Error(err))
-		response.Error(c, "REQ_002", "validation failed")
+	if ok := bindAndValidate(c, &req); !ok {
 		return
 	}
 
@@ -123,12 +119,25 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	userID := int(claims["user_id"].(float64))
+	userID, err := security.GetIntClaim(claims, "user_id")
+	if err != nil {
+		response.Error(c, "AUTH_004", "invalid user in token")
+		return
+	}
 
-	// ambil user dari DB
-	user, _ := h.UserService.Repo.GetByID(userID)
+	user, err := h.UserService.Repo.GetByID(userID)
+	if err != nil {
+		logger.Log.Error("refresh failed to load user", zap.Error(err), zap.Int("user_id", userID))
+		response.Error(c, "AUTH_005", "failed to refresh token")
+		return
+	}
 
-	newAccess, _ := security.GenerateAccessToken(user.ID, user.Email, user.Role)
+	newAccess, err := security.GenerateAccessToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		logger.Log.Error("failed to generate access token", zap.Error(err), zap.Int("user_id", userID))
+		response.Error(c, "AUTH_005", "failed to refresh token")
+		return
+	}
 
 	response.Success(c, gin.H{
 		"access_token": newAccess,

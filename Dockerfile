@@ -8,14 +8,18 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o app ./cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags='-s -w' -o app ./cmd
 
-# Run stage (lebih ringan)
-FROM alpine:latest
+# Run stage
+FROM alpine:3.22
 
 WORKDIR /root/
 
+RUN adduser -D -H appuser && apk add --no-cache ca-certificates
+
 COPY --from=builder /app/app .
+
+USER appuser
 
 EXPOSE 8080
 

@@ -14,11 +14,14 @@ func LoggerMiddleware() gin.HandlerFunc {
 
 		c.Next()
 
+		requestID, _ := c.Get("request_id")
+
 		logger.Log.Info("request",
 			zap.String("path", c.Request.URL.Path),
 			zap.String("method", c.Request.Method),
 			zap.Int("status", c.Writer.Status()),
 			zap.Duration("latency", time.Since(start)),
+			zap.Any("request_id", requestID),
 		)
 	}
 }

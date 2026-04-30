@@ -33,6 +33,10 @@ import (
 func main() {
 	_ = godotenv.Load()
 
+	if err := config.RequireEnv("JWT_SECRET", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"); err != nil {
+		log.Fatal(err)
+	}
+
 	cache.Init()
 	logger.Init()
 	defer logger.Log.Sync()
@@ -56,10 +60,13 @@ func main() {
 	// gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
+	r.Use(middleware.RequestIDMiddleware())
 	r.Use(middleware.LoggerMiddleware())
 	r.Use(middleware.ErrorMiddleware())
 	r.Use(cors.Default())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/health/live", middleware.LivenessHandler)
+	r.GET("/health/ready", middleware.ReadinessHandler)
 
 	api := r.Group("/api")
 
@@ -79,5 +86,7 @@ func main() {
 	admin.GET("/users", userHandler.GetUsers)
 
 	log.Println("Server running at :8080")
-	r.Run(":8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal(err)
+	}
 }
