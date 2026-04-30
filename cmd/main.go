@@ -91,6 +91,7 @@ func main() {
 
 	protected.GET("/users", userHandler.GetUsers)
 	protected.GET("/users/:id", userHandler.GetUserByID)
+
 	master := protected.Group("/master")
 	master.GET("/level-areas", levelAreaHandler.GetAll)
 	master.GET("/level-areas/:id", levelAreaHandler.GetByID)

@@ -28,6 +28,16 @@ func bindAndValidate(c *gin.Context, req interface{}) bool {
 	return true
 }
 
+// Create godoc
+// @Summary Create level area
+// @Description Create new level area
+// @Tags level-area
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateRequest true "Create level area"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/master/level-areas [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if ok := bindAndValidate(c, &req); !ok {
@@ -49,6 +59,14 @@ func (h *Handler) Create(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// GetAll godoc
+// @Summary Get all level area
+// @Description Get list of level area
+// @Tags level-area
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /api/master/level-areas [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	items, err := h.Service.GetAll()
 	if err != nil {
@@ -59,6 +77,15 @@ func (h *Handler) GetAll(c *gin.Context) {
 	response.Success(c, items)
 }
 
+// GetByID godoc
+// @Summary Get level area by ID
+// @Description Get detail level area
+// @Tags level-area
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Level Area ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/master/level-areas/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -75,6 +102,17 @@ func (h *Handler) GetByID(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// Update godoc
+// @Summary Update level area
+// @Description Update existing level area
+// @Tags level-area
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Level Area ID"
+// @Param request body UpdateRequest true "Update level area"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/master/level-areas/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -102,6 +140,15 @@ func (h *Handler) Update(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// Delete godoc
+// @Summary Delete level area
+// @Description Soft delete level area
+// @Tags level-area
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Level Area ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/master/level-areas/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
