@@ -13,11 +13,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags='-s -w' -o app ./cmd
 # Run stage
 FROM alpine:3.22
 
-WORKDIR /root/
-
 RUN adduser -D -H appuser && apk add --no-cache ca-certificates
 
-COPY --from=builder /app/app .
+WORKDIR /app
+
+COPY --from=builder --chown=appuser:appuser /app/app ./app
 
 USER appuser
 
