@@ -11,6 +11,7 @@ import (
 
 	"social-be/internal/config"
 	"social-be/internal/domain/auth"
+	"social-be/internal/domain/levelarea"
 	"social-be/internal/domain/user"
 	"social-be/internal/middleware"
 	"social-be/internal/pkg/cache"
@@ -55,10 +56,14 @@ func main() {
 	}
 
 	userRepo := &user.Repository{DB: db}
+	levelAreaRepo := &levelarea.Repository{DB: db}
+
 	userService := &user.Service{Repo: userRepo}
+	levelAreaService := &levelarea.Service{Repo: levelAreaRepo}
 
 	userHandler := &user.Handler{Service: userService}
 	authHandler := &auth.Handler{UserService: userService}
+	levelAreaHandler := &levelarea.Handler{Service: levelAreaService}
 
 	// gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
@@ -86,6 +91,12 @@ func main() {
 
 	protected.GET("/users", userHandler.GetUsers)
 	protected.GET("/users/:id", userHandler.GetUserByID)
+	master := protected.Group("/master")
+	master.GET("/level-areas", levelAreaHandler.GetAll)
+	master.GET("/level-areas/:id", levelAreaHandler.GetByID)
+	master.POST("/level-areas", levelAreaHandler.Create)
+	master.PUT("/level-areas/:id", levelAreaHandler.Update)
+	master.DELETE("/level-areas/:id", levelAreaHandler.Delete)
 
 	admin := protected.Group("/admin")
 	admin.Use(middleware.RoleMiddleware(1))
