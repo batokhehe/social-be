@@ -14,9 +14,9 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 
 	var out LevelArea
 	err := r.DB.QueryRow(`
-		INSERT INTO level_areas (level, tingkatan_area, description, status, created_by, updated_by)
+		INSERT INTO level_areas (level, name, description, status, created_by, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $5)
-		RETURNING id_level_area, level, tingkatan_area, description, status, created_by, updated_by, deleted_by
+		RETURNING id, level, name, description, status, created_by, updated_by, deleted_by
 	`, req.Level, req.TingkatanArea, req.Description, status, actorID).Scan(
 		&out.IDLevelArea,
 		&out.Level,
@@ -36,7 +36,7 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 
 func (r *Repository) GetAll() ([]LevelArea, error) {
 	rows, err := r.DB.Query(`
-		SELECT id_level_area, level, tingkatan_area, description, status, created_by, updated_by, deleted_by
+		SELECT id, level, name, description, status, created_by, updated_by, deleted_by
 		FROM level_areas
 		WHERE deleted_at IS NULL
 		ORDER BY level ASC
@@ -60,9 +60,9 @@ func (r *Repository) GetAll() ([]LevelArea, error) {
 func (r *Repository) GetByID(id int) (*LevelArea, error) {
 	var item LevelArea
 	err := r.DB.QueryRow(`
-		SELECT id_level_area, level, tingkatan_area, description, status, created_by, updated_by, deleted_by
+		SELECT id, level, name, description, status, created_by, updated_by, deleted_by
 		FROM level_areas
-		WHERE id_level_area = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(&item.IDLevelArea, &item.Level, &item.TingkatanArea, &item.Description, &item.Status, &item.CreatedBy, &item.UpdatedBy, &item.DeletedBy)
 	if err != nil {
 		return nil, err
@@ -80,13 +80,13 @@ func (r *Repository) Update(id int, req UpdateRequest, actorID int) (*LevelArea,
 	err := r.DB.QueryRow(`
 		UPDATE level_areas
 		SET level = $1,
-		    tingkatan_area = $2,
+		    name = $2,
 		    description = $3,
 		    status = $4,
 		    updated_by = $5,
 		    updated_at = NOW()
-		WHERE id_level_area = $6 AND deleted_at IS NULL
-		RETURNING id_level_area, level, tingkatan_area, description, status, created_by, updated_by, deleted_by
+		WHERE id = $6 AND deleted_at IS NULL
+		RETURNING id, level, name, description, status, created_by, updated_by, deleted_by
 	`, req.Level, req.TingkatanArea, req.Description, status, actorID, id).Scan(
 		&out.IDLevelArea,
 		&out.Level,
@@ -111,7 +111,7 @@ func (r *Repository) SoftDelete(id int, actorID int) error {
 		    updated_by = $2,
 		    updated_at = NOW(),
 		    status = 'inactive'
-		WHERE id_level_area = $1 AND deleted_at IS NULL
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id, actorID)
 	return err
 }

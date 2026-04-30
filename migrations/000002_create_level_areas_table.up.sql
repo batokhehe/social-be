@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS level_areas (
-    id_level_area SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     level INT NOT NULL,
-    tingkatan_area VARCHAR(20) NOT NULL,
+    name VARCHAR(20) NOT NULL,
     description VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     created_by INT NULL,
