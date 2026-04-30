@@ -17,10 +17,10 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 		INSERT INTO level_areas (level, name, description, status, created_by, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $5)
 		RETURNING id, level, name, description, status, created_by, updated_by, deleted_by
-	`, req.Level, req.TingkatanArea, req.Description, status, actorID).Scan(
-		&out.IDLevelArea,
+	`, req.Level, req.Name, req.Description, status, actorID).Scan(
+		&out.ID,
 		&out.Level,
-		&out.TingkatanArea,
+		&out.Name,
 		&out.Description,
 		&out.Status,
 		&out.CreatedBy,
@@ -49,7 +49,7 @@ func (r *Repository) GetAll() ([]LevelArea, error) {
 	var items []LevelArea
 	for rows.Next() {
 		var item LevelArea
-		if err := rows.Scan(&item.IDLevelArea, &item.Level, &item.TingkatanArea, &item.Description, &item.Status, &item.CreatedBy, &item.UpdatedBy, &item.DeletedBy); err != nil {
+		if err := rows.Scan(&item.ID, &item.Level, &item.Name, &item.Description, &item.Status, &item.CreatedBy, &item.UpdatedBy, &item.DeletedBy); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -63,7 +63,7 @@ func (r *Repository) GetByID(id int) (*LevelArea, error) {
 		SELECT id, level, name, description, status, created_by, updated_by, deleted_by
 		FROM level_areas
 		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&item.IDLevelArea, &item.Level, &item.TingkatanArea, &item.Description, &item.Status, &item.CreatedBy, &item.UpdatedBy, &item.DeletedBy)
+	`, id).Scan(&item.ID, &item.Level, &item.Name, &item.Description, &item.Status, &item.CreatedBy, &item.UpdatedBy, &item.DeletedBy)
 	if err != nil {
 		return nil, err
 	}
@@ -87,10 +87,10 @@ func (r *Repository) Update(id int, req UpdateRequest, actorID int) (*LevelArea,
 		    updated_at = NOW()
 		WHERE id = $6 AND deleted_at IS NULL
 		RETURNING id, level, name, description, status, created_by, updated_by, deleted_by
-	`, req.Level, req.TingkatanArea, req.Description, status, actorID, id).Scan(
-		&out.IDLevelArea,
+	`, req.Level, req.Name, req.Description, status, actorID, id).Scan(
+		&out.ID,
 		&out.Level,
-		&out.TingkatanArea,
+		&out.Name,
 		&out.Description,
 		&out.Status,
 		&out.CreatedBy,
