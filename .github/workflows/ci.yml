@@ -18,12 +18,14 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.22
+          go-version: 1.25 # ← Update to 1.25 to match go.mod
           cache: true
 
-      # 🔹 Download deps
-      - name: Download dependencies
-        run: go mod tidy
+      # 🔹 Tidy and Download deps
+      - name: Tidy and Download dependencies
+        run: |
+          go mod tidy
+          go mod download
 
       # 🔹 Lint (pakai versi fix biar stabil)
       - name: Run Linter
