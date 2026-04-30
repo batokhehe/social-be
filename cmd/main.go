@@ -6,6 +6,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"social-be/internal/config"
@@ -40,7 +41,9 @@ func main() {
 
 	cache.Init()
 	logger.Init()
-	defer logger.Log.Sync()
+	defer func() {
+		_ = logger.Log.Sync()
+	}()
 
 	_, err := cache.RDB.Ping(cache.Ctx).Result()
 	if err != nil {
@@ -68,10 +71,13 @@ func main() {
 	r.Use(middleware.RequestIDMiddleware())
 	r.Use(middleware.LoggerMiddleware())
 	r.Use(middleware.ErrorMiddleware())
+	r.Use(middleware.MetricsMiddleware())
 	r.Use(cors.Default())
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/health/live", middleware.LivenessHandler)
 	r.GET("/health/ready", middleware.ReadinessHandler)
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	api := r.Group("/api")
 

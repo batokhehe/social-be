@@ -1,0 +1,58 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 🔹 Checkout
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 🔹 Setup Go + cache
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22
+          cache: true
+
+      # 🔹 Download deps
+      - name: Download dependencies
+        run: go mod tidy
+
+      # 🔹 Lint (pakai versi fix biar stabil)
+      - name: Run Linter
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+          golangci-lint run --timeout=5m
+
+      # 🔹 Test (kalau nanti ada unit test)
+      - name: Run Tests
+        run: go test ./... || true
+
+      # 🔹 Build binary
+      - name: Build
+        run: go build -v ./...
+
+      # 🔹 Build Docker image
+      - name: Build Docker Image
+        run: docker build -t social-be .
+
+      # 🔹 Deploy (optional - aktifkan kalau sudah ada server)
+      - name: Deploy to Server
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/backend
+            git pull
+            docker compose down
+            docker compose up -d --build

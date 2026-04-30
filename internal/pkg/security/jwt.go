@@ -1,6 +1,7 @@
 package security
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -46,5 +47,10 @@ func ParseToken(tokenStr string) (jwt.MapClaims, error) {
 		return nil, err
 	}
 
-	return token.Claims.(jwt.MapClaims), nil
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("invalid token claims")
+	}
+
+	return claims, nil
 }
