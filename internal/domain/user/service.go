@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	userListCacheKey       = "user:list"
+	userByIDCacheKeyFormat = "user:%d"
+)
+
 type Service struct {
 	Repo *Repository
 }
@@ -18,7 +23,8 @@ func (s *Service) Register(name, email, password string) error {
 	if err != nil {
 		return err
 	}
-	cache.RDB.Del(cache.Ctx, "users:all")
+
+	cache.RDB.Del(cache.Ctx, userListCacheKey)
 	return s.Repo.Create(name, email, hash)
 }
 
@@ -46,7 +52,7 @@ func (s *Service) Login(email, password string) (string, string, error) {
 }
 
 func (s *Service) GetUsers() ([]User, error) {
-	val, err := cache.RDB.Get(cache.Ctx, "user:list").Result()
+	val, err := cache.RDB.Get(cache.Ctx, userListCacheKey).Result()
 	if err == nil {
 		var users []User
 		if err := json.Unmarshal([]byte(val), &users); err == nil {
@@ -60,15 +66,14 @@ func (s *Service) GetUsers() ([]User, error) {
 	}
 
 	data, _ := json.Marshal(users)
-	cache.RDB.Set(cache.Ctx, "user:list", data, time.Minute)
+	cache.RDB.Set(cache.Ctx, userListCacheKey, data, time.Minute)
 
 	return users, nil
 }
 
 func (s *Service) GetByID(id int) (*User, error) {
-	key := fmt.Sprintf("user:%d", id)
+	key := fmt.Sprintf(userByIDCacheKeyFormat, id)
 
-	// 🔹 cek cache
 	val, err := cache.RDB.Get(cache.Ctx, key).Result()
 	if err == nil {
 		var user User
@@ -77,13 +82,11 @@ func (s *Service) GetByID(id int) (*User, error) {
 		}
 	}
 
-	// 🔹 ambil dari DB
 	user, err := s.Repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 
-	// 🔹 simpan ke cache
 	data, _ := json.Marshal(user)
 	cache.RDB.Set(cache.Ctx, key, data, time.Minute)
 

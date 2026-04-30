@@ -2,14 +2,11 @@ package middleware
 
 import (
 	"net/http"
-	"os"
+	"social-be/internal/pkg/security"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
-
-var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -27,22 +24,37 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.Parse(parts[1], func(token *jwt.Token) (interface{}, error) {
-			return jwtSecret, nil
-		})
-
-		if err != nil || !token.Valid {
+		claims, err := security.ParseToken(parts[1])
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			c.Abort()
 			return
 		}
 
-		claims := token.Claims.(jwt.MapClaims)
+		userID, err := security.GetIntClaim(claims, "user_id")
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.Abort()
+			return
+		}
 
-		// 🔥 inject ke context
-		c.Set("user_id", int(claims["user_id"].(float64)))
-		c.Set("email", claims["email"].(string))
-		c.Set("role", int(claims["role"].(float64))) // <-- penting
+		email, err := security.GetStringClaim(claims, "email")
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.Abort()
+			return
+		}
+
+		role, err := security.GetIntClaim(claims, "role")
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.Abort()
+			return
+		}
+
+		c.Set("user_id", userID)
+		c.Set("email", email)
+		c.Set("role", role)
 
 		c.Next()
 	}
