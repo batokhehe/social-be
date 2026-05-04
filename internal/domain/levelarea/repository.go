@@ -1,6 +1,7 @@
 package levelarea
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -45,6 +46,13 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 		status = "active"
 	}
 
+	level := req.Level
+	if level == 0 {
+		level = 1
+	}
+
+	item := levelAreaModel{
+		Level:       level,
 	item := levelAreaModel{
 		Level:       req.Level,
 		Name:        req.Name,
@@ -54,6 +62,30 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 		UpdatedBy:   &actorID,
 	}
 
+	if err := r.DB.Transaction(func(tx *gorm.DB) error {
+		if req.BelowLevelAreaID != nil {
+			var anchor levelAreaModel
+			if err := tx.Where("id = ? AND deleted_at IS NULL", *req.BelowLevelAreaID).First(&anchor).Error; err != nil {
+				return err
+			}
+
+			insertLevel := anchor.Level + 1
+			if err := tx.Model(&levelAreaModel{}).
+				Where("deleted_at IS NULL AND level >= ?", insertLevel).
+				Update("level", gorm.Expr("level + 1")).Error; err != nil {
+				return err
+			}
+			item.Level = insertLevel
+		}
+
+		if err := tx.Create(&item).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
 	if err := r.DB.Create(&item).Error; err != nil {
 		return nil, err
 	}
