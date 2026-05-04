@@ -1,7 +1,7 @@
 package levelarea
 
 type Service struct {
-	Repo *Repository
+	Repo Repository
 }
 
 func (s *Service) Create(req CreateRequest, actorID int) (*LevelArea, error) {

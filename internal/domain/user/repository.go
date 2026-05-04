@@ -1,77 +1,73 @@
 package user
 
-import (
-	"database/sql"
-)
+import "gorm.io/gorm"
 
-type Repository struct {
-	DB *sql.DB
+type Repository interface {
+	Create(name, email, password string) error
+	GetAll() ([]User, error)
+	GetByEmail(email string) (*User, string, int, error)
+	GetByID(id int) (*User, error)
 }
 
-func (r *Repository) Create(name, email, password string) error {
-	_, err := r.DB.Exec(`
-		INSERT INTO users (name, email, password_hash)
-		VALUES ($1, $2, $3)
-	`, name, email, password)
-
-	return err
+type GormRepository struct {
+	DB *gorm.DB
 }
 
-func (r *Repository) GetAll() ([]User, error) {
-	rows, err := r.DB.Query(`
-		SELECT id, name, email 
-		FROM users 
-		WHERE deleted_at IS NULL
-	`)
-	if err != nil {
+type userModel struct {
+	ID           int     `gorm:"column:id"`
+	Name         string  `gorm:"column:name"`
+	Email        string  `gorm:"column:email"`
+	PasswordHash string  `gorm:"column:password_hash"`
+	Role         int     `gorm:"column:role"`
+	DeletedAt    *string `gorm:"column:deleted_at"`
+}
+
+func (userModel) TableName() string {
+	return "users"
+}
+
+func (r *GormRepository) Create(name, email, password string) error {
+	row := userModel{Name: name, Email: email, PasswordHash: password}
+	return r.DB.Select("name", "email", "password_hash").Create(&row).Error
+}
+
+func (r *GormRepository) GetAll() ([]User, error) {
+	var rows []userModel
+	if err := r.DB.Select("id", "name", "email").
+		Where("deleted_at IS NULL").
+		Order("id ASC").
+		Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var users []User
-
-	for rows.Next() {
-		var u User
-		err := rows.Scan(&u.ID, &u.Name, &u.Email)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, u)
+	users := make([]User, 0, len(rows))
+	for _, row := range rows {
+		users = append(users, User{ID: row.ID, Name: row.Name, Email: row.Email})
 	}
 
 	return users, nil
 }
 
-func (r *Repository) GetByEmail(email string) (*User, string, int, error) {
-	var user User
-	var passwordHash string
-	var role int
-
-	err := r.DB.QueryRow(`
-		SELECT id, name, email, password_hash, role
-		FROM users
-		WHERE email = $1 AND deleted_at IS NULL
-	`, email).Scan(&user.ID, &user.Name, &user.Email, &passwordHash, &role)
-
+func (r *GormRepository) GetByEmail(email string) (*User, string, int, error) {
+	var row userModel
+	err := r.DB.Select("id", "name", "email", "password_hash", "role").
+		Where("email = ? AND deleted_at IS NULL", email).
+		Take(&row).Error
 	if err != nil {
 		return nil, "", 0, err
 	}
 
-	return &user, passwordHash, role, nil
+	return &User{ID: row.ID, Name: row.Name, Email: row.Email}, row.PasswordHash, row.Role, nil
 }
 
-func (r *Repository) GetByID(id int) (*User, error) {
-	var user User
-
-	err := r.DB.QueryRow(`
-		SELECT id, name, email
-		FROM users
-		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&user.ID, &user.Name, &user.Email)
-
+func (r *GormRepository) GetByID(id int) (*User, error) {
+	var row userModel
+	err := r.DB.Select("id", "name", "email").
+		Where("id = ? AND deleted_at IS NULL", id).
+		Take(&row).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return &User{ID: row.ID, Name: row.Name, Email: row.Email}, nil
 }
