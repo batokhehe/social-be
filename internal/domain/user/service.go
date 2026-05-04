@@ -15,7 +15,7 @@ const (
 )
 
 type Service struct {
-	Repo *Repository
+	Repo Repository
 }
 
 func (s *Service) Register(name, email, password string) error {

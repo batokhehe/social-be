@@ -1,12 +1,15 @@
 package user
 
-import (
-	"errors"
+import "gorm.io/gorm"
 
-	"gorm.io/gorm"
-)
+type Repository interface {
+	Create(name, email, password string) error
+	GetAll() ([]User, error)
+	GetByEmail(email string) (*User, string, int, error)
+	GetByID(id int) (*User, error)
+}
 
-type Repository struct {
+type GormRepository struct {
 	DB *gorm.DB
 }
 
@@ -23,19 +26,17 @@ func (userModel) TableName() string {
 	return "users"
 }
 
-func (r *Repository) Create(name, email, password string) error {
-	payload := map[string]any{
-		"name":          name,
-		"email":         email,
-		"password_hash": password,
-	}
-
-	return r.DB.Table("users").Create(payload).Error
+func (r *GormRepository) Create(name, email, password string) error {
+	row := userModel{Name: name, Email: email, PasswordHash: password}
+	return r.DB.Select("name", "email", "password_hash").Create(&row).Error
 }
 
-func (r *Repository) GetAll() ([]User, error) {
+func (r *GormRepository) GetAll() ([]User, error) {
 	var rows []userModel
-	if err := r.DB.Where("deleted_at IS NULL").Find(&rows).Error; err != nil {
+	if err := r.DB.Select("id", "name", "email").
+		Where("deleted_at IS NULL").
+		Order("id ASC").
+		Find(&rows).Error; err != nil {
 		return nil, err
 	}
 
@@ -47,9 +48,11 @@ func (r *Repository) GetAll() ([]User, error) {
 	return users, nil
 }
 
-func (r *Repository) GetByEmail(email string) (*User, string, int, error) {
+func (r *GormRepository) GetByEmail(email string) (*User, string, int, error) {
 	var row userModel
-	err := r.DB.Where("email = ? AND deleted_at IS NULL", email).First(&row).Error
+	err := r.DB.Select("id", "name", "email", "password_hash", "role").
+		Where("email = ? AND deleted_at IS NULL", email).
+		Take(&row).Error
 	if err != nil {
 		return nil, "", 0, err
 	}
@@ -57,12 +60,11 @@ func (r *Repository) GetByEmail(email string) (*User, string, int, error) {
 	return &User{ID: row.ID, Name: row.Name, Email: row.Email}, row.PasswordHash, row.Role, nil
 }
 
-func (r *Repository) GetByID(id int) (*User, error) {
+func (r *GormRepository) GetByID(id int) (*User, error) {
 	var row userModel
-	err := r.DB.Where("id = ? AND deleted_at IS NULL", id).First(&row).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
-	}
+	err := r.DB.Select("id", "name", "email").
+		Where("id = ? AND deleted_at IS NULL", id).
+		Take(&row).Error
 	if err != nil {
 		return nil, err
 	}

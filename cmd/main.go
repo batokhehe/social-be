@@ -55,8 +55,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	userRepo := &user.Repository{DB: db}
-	levelAreaRepo := &levelarea.Repository{DB: db}
+	userRepo := &user.GormRepository{DB: db}
+	levelAreaRepo := &levelarea.GormRepository{DB: db}
 
 	userService := &user.Service{Repo: userRepo}
 	levelAreaService := &levelarea.Service{Repo: levelAreaRepo}
