@@ -52,8 +52,6 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 	}
 
 	item := levelAreaModel{
-		Level:       level,
-	item := levelAreaModel{
 		Level:       req.Level,
 		Name:        req.Name,
 		Description: req.Description,
@@ -86,7 +84,6 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-	if err := r.DB.Create(&item).Error; err != nil {
 		return nil, err
 	}
 
