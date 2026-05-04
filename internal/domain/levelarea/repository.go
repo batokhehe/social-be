@@ -1,9 +1,43 @@
 package levelarea
 
-import "database/sql"
+import (
+	"errors"
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Repository struct {
-	DB *sql.DB
+	DB *gorm.DB
+}
+
+type levelAreaModel struct {
+	ID          int        `gorm:"column:id"`
+	Level       int        `gorm:"column:level"`
+	Name        string     `gorm:"column:name"`
+	Description string     `gorm:"column:description"`
+	Status      string     `gorm:"column:status"`
+	CreatedBy   *int       `gorm:"column:created_by"`
+	UpdatedBy   *int       `gorm:"column:updated_by"`
+	DeletedBy   *int       `gorm:"column:deleted_by"`
+	DeletedAt   *time.Time `gorm:"column:deleted_at"`
+}
+
+func (levelAreaModel) TableName() string {
+	return "level_areas"
+}
+
+func toEntity(item levelAreaModel) LevelArea {
+	return LevelArea{
+		ID:          item.ID,
+		Level:       item.Level,
+		Name:        item.Name,
+		Description: item.Description,
+		Status:      item.Status,
+		CreatedBy:   item.CreatedBy,
+		UpdatedBy:   item.UpdatedBy,
+		DeletedBy:   item.DeletedBy,
+	}
 }
 
 func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) {
@@ -12,62 +46,71 @@ func (r *Repository) Create(req CreateRequest, actorID int) (*LevelArea, error) 
 		status = "active"
 	}
 
-	var out LevelArea
-	err := r.DB.QueryRow(`
-		INSERT INTO level_areas (level, name, description, status, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $5)
-		RETURNING id, level, name, description, status, created_by, updated_by, deleted_by
-	`, req.Level, req.Name, req.Description, status, actorID).Scan(
-		&out.ID,
-		&out.Level,
-		&out.Name,
-		&out.Description,
-		&out.Status,
-		&out.CreatedBy,
-		&out.UpdatedBy,
-		&out.DeletedBy,
-	)
-	if err != nil {
+	level := req.Level
+	if level == 0 {
+		level = 1
+	}
+
+	item := levelAreaModel{
+		Level:       level,
+		Name:        req.Name,
+		Description: req.Description,
+		Status:      status,
+		CreatedBy:   &actorID,
+		UpdatedBy:   &actorID,
+	}
+
+	if err := r.DB.Transaction(func(tx *gorm.DB) error {
+		if req.BelowLevelAreaID != nil {
+			var anchor levelAreaModel
+			if err := tx.Where("id = ? AND deleted_at IS NULL", *req.BelowLevelAreaID).First(&anchor).Error; err != nil {
+				return err
+			}
+
+			insertLevel := anchor.Level + 1
+			if err := tx.Model(&levelAreaModel{}).
+				Where("deleted_at IS NULL AND level >= ?", insertLevel).
+				Update("level", gorm.Expr("level + 1")).Error; err != nil {
+				return err
+			}
+			item.Level = insertLevel
+		}
+
+		if err := tx.Create(&item).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
 		return nil, err
 	}
 
+	out := toEntity(item)
 	return &out, nil
 }
 
 func (r *Repository) GetAll() ([]LevelArea, error) {
-	rows, err := r.DB.Query(`
-		SELECT id, level, name, description, status, created_by, updated_by, deleted_by
-		FROM level_areas
-		WHERE deleted_at IS NULL
-		ORDER BY level ASC
-	`)
-	if err != nil {
+	var rows []levelAreaModel
+	if err := r.DB.Where("deleted_at IS NULL").Order("level ASC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var items []LevelArea
-	for rows.Next() {
-		var item LevelArea
-		if err := rows.Scan(&item.ID, &item.Level, &item.Name, &item.Description, &item.Status, &item.CreatedBy, &item.UpdatedBy, &item.DeletedBy); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
+	items := make([]LevelArea, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, toEntity(row))
 	}
 	return items, nil
 }
 
 func (r *Repository) GetByID(id int) (*LevelArea, error) {
-	var item LevelArea
-	err := r.DB.QueryRow(`
-		SELECT id, level, name, description, status, created_by, updated_by, deleted_by
-		FROM level_areas
-		WHERE id = $1 AND deleted_at IS NULL
-	`, id).Scan(&item.ID, &item.Level, &item.Name, &item.Description, &item.Status, &item.CreatedBy, &item.UpdatedBy, &item.DeletedBy)
-	if err != nil {
+	var item levelAreaModel
+	if err := r.DB.Where("id = ? AND deleted_at IS NULL", id).First(&item).Error; err != nil {
 		return nil, err
 	}
-	return &item, nil
+	out := toEntity(item)
+	return &out, nil
 }
 
 func (r *Repository) Update(id int, req UpdateRequest, actorID int) (*LevelArea, error) {
@@ -76,42 +119,29 @@ func (r *Repository) Update(id int, req UpdateRequest, actorID int) (*LevelArea,
 		status = "active"
 	}
 
-	var out LevelArea
-	err := r.DB.QueryRow(`
-		UPDATE level_areas
-		SET level = $1,
-		    name = $2,
-		    description = $3,
-		    status = $4,
-		    updated_by = $5,
-		    updated_at = NOW()
-		WHERE id = $6 AND deleted_at IS NULL
-		RETURNING id, level, name, description, status, created_by, updated_by, deleted_by
-	`, req.Level, req.Name, req.Description, status, actorID, id).Scan(
-		&out.ID,
-		&out.Level,
-		&out.Name,
-		&out.Description,
-		&out.Status,
-		&out.CreatedBy,
-		&out.UpdatedBy,
-		&out.DeletedBy,
-	)
-	if err != nil {
+	updates := map[string]any{
+		"level":       req.Level,
+		"name":        req.Name,
+		"description": req.Description,
+		"status":      status,
+		"updated_by":  actorID,
+		"updated_at":  gorm.Expr("NOW()"),
+	}
+
+	if err := r.DB.Model(&levelAreaModel{}).Where("id = ? AND deleted_at IS NULL", id).Updates(updates).Error; err != nil {
 		return nil, err
 	}
-	return &out, nil
+
+	return r.GetByID(id)
 }
 
 func (r *Repository) SoftDelete(id int, actorID int) error {
-	_, err := r.DB.Exec(`
-		UPDATE level_areas
-		SET deleted_at = NOW(),
-		    deleted_by = $2,
-		    updated_by = $2,
-		    updated_at = NOW(),
-		    status = 'inactive'
-		WHERE id = $1 AND deleted_at IS NULL
-	`, id, actorID)
-	return err
+	updates := map[string]any{
+		"deleted_at": gorm.Expr("NOW()"),
+		"deleted_by": actorID,
+		"updated_by": actorID,
+		"updated_at": gorm.Expr("NOW()"),
+		"status":     "inactive",
+	}
+	return r.DB.Model(&levelAreaModel{}).Where("id = ? AND deleted_at IS NULL", id).Updates(updates).Error
 }

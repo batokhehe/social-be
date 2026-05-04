@@ -1,17 +1,17 @@
 package config
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"time"
 
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func InitDB() (*sql.DB, error) {
-	connStr := fmt.Sprintf(
+func InitDB() (*gorm.DB, error) {
+	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
@@ -20,21 +20,21 @@ func InitDB() (*sql.DB, error) {
 		os.Getenv("DB_NAME"),
 	)
 
-	db, err := sql.Open("postgres", connStr)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	if err := db.PingContext(pingCtx); err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
 		return nil, err
 	}
+
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(25)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 	return db, nil
 }
