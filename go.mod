@@ -10,11 +10,10 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.5.1
+	github.com/sirupsen/logrus v1.9.4
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.3
-	gorm.io/driver/postgres v1.6.0
-	gorm.io/gorm v1.31.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.31.0
 	gorm.io/driver/postgres v1.6.0

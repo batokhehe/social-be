@@ -50,7 +50,9 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	result, err := h.Service.Create(req, actorID.(int))
+	ctx := c.Request.Context()
+
+	result, err := h.Service.Create(ctx, req, actorID.(int))
 	if err != nil {
 		response.Error(c, "DB_101", "failed to create level area")
 		return
@@ -68,7 +70,9 @@ func (h *Handler) Create(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/master/level-areas [get]
 func (h *Handler) GetAll(c *gin.Context) {
-	items, err := h.Service.GetAll()
+	ctx := c.Request.Context()
+
+	items, err := h.Service.GetAll(ctx)
 	if err != nil {
 		response.Error(c, "DB_102", "failed to fetch level area")
 		return
@@ -93,7 +97,9 @@ func (h *Handler) GetByID(c *gin.Context) {
 		return
 	}
 
-	item, err := h.Service.GetByID(id)
+	ctx := c.Request.Context()
+
+	item, err := h.Service.GetByID(ctx, id)
 	if err != nil {
 		response.Error(c, "DB_103", "level area not found")
 		return
@@ -131,7 +137,9 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	item, err := h.Service.Update(id, req, actorID.(int))
+	ctx := c.Request.Context()
+
+	item, err := h.Service.Update(ctx, id, req, actorID.(int))
 	if err != nil {
 		response.Error(c, "DB_104", "failed to update level area")
 		return
@@ -162,7 +170,9 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.Service.SoftDelete(id, actorID.(int)); err != nil {
+	ctx := c.Request.Context()
+
+	if err := h.Service.SoftDelete(ctx, id, actorID.(int)); err != nil {
 		response.Error(c, "DB_105", "failed to delete level area")
 		return
 	}

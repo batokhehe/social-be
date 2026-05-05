@@ -1,27 +1,33 @@
 package levelarea
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 type Repository interface {
-	Create(req CreateRequest, actorID int) (*LevelArea, error)
-	GetAll() ([]LevelArea, error)
-	GetByID(id int) (*LevelArea, error)
-	Update(id int, req UpdateRequest, actorID int) (*LevelArea, error)
-	SoftDelete(id int, actorID int) error
+	Create(ctx context.Context, req CreateRequest, actorID int) (*LevelArea, error)
+	GetAll(ctx context.Context) ([]LevelArea, error)
+	GetByID(ctx context.Context, id int) (*LevelArea, error)
+	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*LevelArea, error)
+	SoftDelete(ctx context.Context, id int, actorID int) error
 }
 
 type GormRepository struct {
+	DB     *gorm.DB
+	Logger *logrus.Logger
+}
 
-	"gorm.io/gorm"
-)
-
-type Repository struct {
-	DB *gorm.DB
+func NewGormRepository(db *gorm.DB, logger *logrus.Logger) Repository {
+	return &GormRepository{
+		DB:     db,
+		Logger: logger,
+	}
 }
 
 type levelAreaModel struct {
@@ -53,7 +59,7 @@ func toEntity(item levelAreaModel) LevelArea {
 	}
 }
 
-func (r *GormRepository) Create(req CreateRequest, actorID int) (*LevelArea, error) {
+func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID int) (*LevelArea, error) {
 	status := req.Status
 	if status == "" {
 		status = "active"
@@ -73,30 +79,39 @@ func (r *GormRepository) Create(req CreateRequest, actorID int) (*LevelArea, err
 		UpdatedBy:   &actorID,
 	}
 
-	if err := r.DB.Transaction(func(tx *gorm.DB) error {
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if req.BelowLevelAreaID != nil {
 			var anchor levelAreaModel
-			if err := tx.Where("id = ? AND deleted_at IS NULL", *req.BelowLevelAreaID).First(&anchor).Error; err != nil {
-				return err
+			if err := tx.
+				Where("id = ? AND deleted_at IS NULL", *req.BelowLevelAreaID).
+				First(&anchor).Error; err != nil {
+				return fmt.Errorf("anchor not found: %w", err)
 			}
 
 			insertLevel := anchor.Level + 1
+
 			if err := tx.Model(&levelAreaModel{}).
 				Where("deleted_at IS NULL AND level >= ?", insertLevel).
 				Update("level", gorm.Expr("level + 1")).Error; err != nil {
-				return err
+				return fmt.Errorf("failed shift level: %w", err)
 			}
+
 			item.Level = insertLevel
 		}
 
-		if err := tx.Create(&item).Error; err != nil {
-			return err
+		result := tx.Create(&item)
+		if result.Error != nil {
+			return fmt.Errorf("failed insert level area: %w", result.Error)
 		}
+		if result.RowsAffected == 0 {
+			return errors.New("insert failed: no rows affected")
+		}
+
 		return nil
-	}); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, err
-		}
+	})
+
+	if err != nil {
+		r.Logger.WithError(err).Error("Create LevelArea failed")
 		return nil, err
 	}
 
@@ -104,34 +119,46 @@ func (r *GormRepository) Create(req CreateRequest, actorID int) (*LevelArea, err
 	return &out, nil
 }
 
-func (r *GormRepository) GetAll() ([]LevelArea, error) {
+func (r *GormRepository) GetAll(ctx context.Context) ([]LevelArea, error) {
 	var rows []levelAreaModel
-	if err := r.DB.Select("id", "level", "name", "description", "status", "created_by", "updated_by", "deleted_by").
+
+	err := r.DB.WithContext(ctx).
 		Where("deleted_at IS NULL").
 		Order("level ASC").
-		Find(&rows).Error; err != nil {
-		return nil, err
+		Find(&rows).Error
+
+	if err != nil {
+		r.Logger.WithError(err).Error("GetAll LevelArea failed")
+		return nil, fmt.Errorf("failed get all level area: %w", err)
 	}
 
 	items := make([]LevelArea, 0, len(rows))
 	for _, row := range rows {
 		items = append(items, toEntity(row))
 	}
+
 	return items, nil
 }
 
-func (r *GormRepository) GetByID(id int) (*LevelArea, error) {
+func (r *GormRepository) GetByID(ctx context.Context, id int) (*LevelArea, error) {
 	var item levelAreaModel
-	if err := r.DB.Select("id", "level", "name", "description", "status", "created_by", "updated_by", "deleted_by").
+
+	err := r.DB.WithContext(ctx).
 		Where("id = ? AND deleted_at IS NULL", id).
-		Take(&item).Error; err != nil {
-		return nil, err
+		Take(&item).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("failed get level area by id: %w", err)
 	}
+
 	out := toEntity(item)
 	return &out, nil
 }
 
-func (r *GormRepository) Update(id int, req UpdateRequest, actorID int) (*LevelArea, error) {
+func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*LevelArea, error) {
 	status := req.Status
 	if status == "" {
 		status = "active"
@@ -143,34 +170,46 @@ func (r *GormRepository) Update(id int, req UpdateRequest, actorID int) (*LevelA
 		"description": req.Description,
 		"status":      status,
 		"updated_by":  actorID,
-		"updated_at":  gorm.Expr("NOW()"),
+		"updated_at":  time.Now(),
 	}
 
-	tx := r.DB.Model(&levelAreaModel{}).Where("id = ? AND deleted_at IS NULL", id).Updates(updates)
+	tx := r.DB.WithContext(ctx).
+		Model(&levelAreaModel{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Updates(updates)
+
 	if tx.Error != nil {
-		return nil, tx.Error
+		return nil, fmt.Errorf("failed update level area: %w", tx.Error)
 	}
+
 	if tx.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
 
-	return r.GetByID(id)
+	return r.GetByID(ctx, id)
 }
 
-func (r *GormRepository) SoftDelete(id int, actorID int) error {
+func (r *GormRepository) SoftDelete(ctx context.Context, id int, actorID int) error {
 	updates := map[string]any{
-		"deleted_at": gorm.Expr("NOW()"),
+		"deleted_at": time.Now(),
 		"deleted_by": actorID,
 		"updated_by": actorID,
-		"updated_at": gorm.Expr("NOW()"),
+		"updated_at": time.Now(),
 		"status":     "inactive",
 	}
-	tx := r.DB.Model(&levelAreaModel{}).Where("id = ? AND deleted_at IS NULL", id).Updates(updates)
+
+	tx := r.DB.WithContext(ctx).
+		Model(&levelAreaModel{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Updates(updates)
+
 	if tx.Error != nil {
-		return tx.Error
+		return fmt.Errorf("failed soft delete: %w", tx.Error)
 	}
+
 	if tx.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
+
 	return nil
 }
