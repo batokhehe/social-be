@@ -1,12 +1,17 @@
 package user
 
 import (
+	"fmt"
+	"mime/multipart"
+	"net/http"
+	"path/filepath"
+	"social-be/internal/pkg/apperror"
 	"social-be/internal/pkg/logger"
+	"social-be/internal/pkg/pagination"
 	"social-be/internal/pkg/response"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 type Handler struct {
@@ -22,17 +27,25 @@ type Handler struct {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/users [get]
 func (h *Handler) GetUsers(c *gin.Context) {
-	users, err := h.Service.GetUsers()
-	if err != nil {
-		logger.Log.Error("failed to get users", zap.Error(err))
+	ctx := c.Request.Context()
 
-		response.Error(c, "DB_001", "failed to fetch users")
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
 		return
 	}
 
-	logger.Log.Info("get users success", zap.Int("count", len(users)))
+	users, meta, err := h.Service.GetPaginated(ctx, page)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to get users")
 
-	response.Success(c, users)
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_001", "failed to fetch users"))
+		return
+	}
+
+	logger.FromContext(c.Request.Context()).WithField("count", len(users)).Info("get users success")
+
+	response.SuccessWithPagination(c, users, meta)
 }
 
 // GetUserByID godoc
@@ -49,15 +62,73 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		response.Error(c, "REQ_003", "invalid id")
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid id"))
 		return
 	}
 
-	user, err := h.Service.GetByID(id)
+	ctx := c.Request.Context()
+
+	user, err := h.Service.GetByID(ctx, id)
 	if err != nil {
-		response.Error(c, "DB_002", "user not found")
+		response.AbortError(c, apperror.Wrap(err, http.StatusNotFound, "DB_002", "user not found"))
 		return
 	}
 
 	response.Success(c, user)
+}
+
+// UploadProfilePhoto godoc
+// @Summary Upload profile photo
+// @Description Upload profile photo to NAS and return URL
+// @Tags users
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param profile_photo formData file true "Profile photo"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/users/upload-photo [post]
+func (h *Handler) UploadProfilePhoto(c *gin.Context) {
+	file, err := c.FormFile("profile_photo")
+	if err != nil {
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidBody, "profile_photo is required"))
+		return
+	}
+
+	// Validate file
+	if err := validatePhotoFile(file); err != nil {
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidBody, err.Error()))
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Call NAS API to store image
+	photoURL, err := h.Service.UploadPhotoToNAS(ctx, file)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to upload photo to NAS")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, apperror.CodeInternal, "failed to upload photo"))
+		return
+	}
+
+	logger.FromContext(c.Request.Context()).WithField("url", photoURL).Info("photo uploaded successfully")
+
+	response.Success(c, gin.H{
+		"profile_photo_url": photoURL,
+	})
+}
+
+func validatePhotoFile(file *multipart.FileHeader) error {
+	const maxFileSize = 5 << 20 // 5MB
+	if file.Size > maxFileSize {
+		return fmt.Errorf("file size exceeds %d MB limit", maxFileSize/(1<<20))
+	}
+
+	// Check file extension
+	allowedExt := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true}
+	ext := filepath.Ext(file.Filename)
+	if !allowedExt[ext] {
+		return fmt.Errorf("unsupported file type: %s", ext)
+	}
+
+	return nil
 }

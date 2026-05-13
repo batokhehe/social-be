@@ -1,5 +1,37 @@
 basePath: /
 definitions:
+  attributevolunteer.CreateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
+  attributevolunteer.UpdateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
   auth.LoginRequest:
     properties:
       email:
@@ -10,7 +42,7 @@ definitions:
     - email
     - password
     type: object
-  user.RegisterRequest:
+  auth.RegisterRequest:
     properties:
       email:
         type: string
@@ -23,6 +55,508 @@ definitions:
     - email
     - name
     - password
+    type: object
+  categoryactivity.CreateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
+  categoryactivity.UpdateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
+  levelarea.CreateRequest:
+    properties:
+      below_level_area_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 50
+        type: string
+      name:
+        maxLength: 20
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - description
+    - name
+    type: object
+  levelarea.UpdateRequest:
+    properties:
+      below_level_area_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 50
+        type: string
+      name:
+        maxLength: 20
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - description
+    - name
+    type: object
+  levelvolunteer.CreateRequest:
+    properties:
+      below_level_volunteer_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 50
+        type: string
+      name:
+        maxLength: 20
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - description
+    - name
+    type: object
+  levelvolunteer.UpdateRequest:
+    properties:
+      below_level_volunteer_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 50
+        type: string
+      name:
+        maxLength: 20
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - description
+    - name
+    type: object
+  masteractivity.CreateRequest:
+    properties:
+      category_activity_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - category_activity_id
+    - name
+    type: object
+  masteractivity.UpdateRequest:
+    properties:
+      category_activity_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - category_activity_id
+    - name
+    type: object
+  masterarea.CreateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      level_area_id:
+        maxLength: 20
+        type: string
+      location:
+        maxLength: 100
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      parent_id:
+        minimum: 1
+        type: integer
+    required:
+    - description
+    - level_area_id
+    - location
+    - name
+    type: object
+  masterarea.UpdateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      level_area_id:
+        maxLength: 20
+        type: string
+      location:
+        maxLength: 100
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      parent_id:
+        minimum: 1
+        type: integer
+    required:
+    - description
+    - level_area_id
+    - location
+    - name
+    type: object
+  religion.CreateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
+  religion.UpdateRequest:
+    properties:
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
+  volunteer.CreateRequest:
+    properties:
+      attribute_volunteer_id:
+        minimum: 1
+        type: integer
+      birth_date:
+        type: string
+      birth_place:
+        maxLength: 100
+        type: string
+      blood_type:
+        enum:
+        - A
+        - B
+        - AB
+        - O
+        type: string
+      email:
+        maxLength: 100
+        type: string
+      field:
+        maxLength: 100
+        type: string
+      free_times:
+        items:
+          $ref: '#/definitions/volunteer.FreeTimeRequest'
+        minItems: 1
+        type: array
+      home_phone:
+        maxLength: 30
+        type: string
+      indonesian_name:
+        maxLength: 100
+        type: string
+      interested_activity_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      languages:
+        maxLength: 255
+        type: string
+      last_education:
+        enum:
+        - SD
+        - SMP
+        - SMA
+        - D1
+        - D2
+        - D3
+        - D4
+        - S1
+        - S2
+        - S3
+        type: string
+      level_volunteer_id:
+        minimum: 1
+        type: integer
+      mandarin_name:
+        maxLength: 100
+        type: string
+      marital_status:
+        enum:
+        - single
+        - married
+        - divorced
+        - widowed
+        type: string
+      master_area_id:
+        minimum: 1
+        type: integer
+      office_phone:
+        maxLength: 30
+        type: string
+      phone:
+        maxLength: 30
+        type: string
+      postal_code:
+        maxLength: 20
+        type: string
+      private_vehicle:
+        type: boolean
+      profession:
+        maxLength: 100
+        type: string
+      regular_donor:
+        type: boolean
+      religion_id:
+        minimum: 1
+        type: integer
+      residential_address:
+        maxLength: 255
+        type: string
+      rhesus:
+        enum:
+        - positive
+        - negative
+        - unknown
+        type: string
+      vis_id:
+        maxLength: 50
+        type: string
+    required:
+    - attribute_volunteer_id
+    - birth_date
+    - birth_place
+    - blood_type
+    - email
+    - field
+    - free_times
+    - indonesian_name
+    - interested_activity_ids
+    - languages
+    - last_education
+    - level_volunteer_id
+    - marital_status
+    - master_area_id
+    - phone
+    - postal_code
+    - profession
+    - religion_id
+    - residential_address
+    - rhesus
+    - vis_id
+    type: object
+  volunteer.FreeTimeRequest:
+    properties:
+      day_of_week:
+        enum:
+        - monday
+        - tuesday
+        - wednesday
+        - thursday
+        - friday
+        - saturday
+        - sunday
+        type: string
+      period:
+        enum:
+        - morning
+        - afternoon
+        - evening
+        type: string
+    required:
+    - day_of_week
+    - period
+    type: object
+  volunteer.UpdateRequest:
+    properties:
+      attribute_volunteer_id:
+        minimum: 1
+        type: integer
+      birth_date:
+        type: string
+      birth_place:
+        maxLength: 100
+        type: string
+      blood_type:
+        enum:
+        - A
+        - B
+        - AB
+        - O
+        type: string
+      email:
+        maxLength: 100
+        type: string
+      field:
+        maxLength: 100
+        type: string
+      free_times:
+        items:
+          $ref: '#/definitions/volunteer.FreeTimeRequest'
+        minItems: 1
+        type: array
+      home_phone:
+        maxLength: 30
+        type: string
+      indonesian_name:
+        maxLength: 100
+        type: string
+      interested_activity_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      languages:
+        maxLength: 255
+        type: string
+      last_education:
+        enum:
+        - SD
+        - SMP
+        - SMA
+        - D1
+        - D2
+        - D3
+        - D4
+        - S1
+        - S2
+        - S3
+        type: string
+      level_volunteer_id:
+        minimum: 1
+        type: integer
+      mandarin_name:
+        maxLength: 100
+        type: string
+      marital_status:
+        enum:
+        - single
+        - married
+        - divorced
+        - widowed
+        type: string
+      master_area_id:
+        minimum: 1
+        type: integer
+      office_phone:
+        maxLength: 30
+        type: string
+      phone:
+        maxLength: 30
+        type: string
+      postal_code:
+        maxLength: 20
+        type: string
+      private_vehicle:
+        type: boolean
+      profession:
+        maxLength: 100
+        type: string
+      regular_donor:
+        type: boolean
+      religion_id:
+        minimum: 1
+        type: integer
+      residential_address:
+        maxLength: 255
+        type: string
+      rhesus:
+        enum:
+        - positive
+        - negative
+        - unknown
+        type: string
+      vis_id:
+        maxLength: 50
+        type: string
+    required:
+    - attribute_volunteer_id
+    - birth_date
+    - birth_place
+    - blood_type
+    - email
+    - field
+    - free_times
+    - indonesian_name
+    - interested_activity_ids
+    - languages
+    - last_education
+    - level_volunteer_id
+    - marital_status
+    - master_area_id
+    - phone
+    - postal_code
+    - profession
+    - religion_id
+    - residential_address
+    - rhesus
+    - vis_id
     type: object
 info:
   contact: {}
@@ -53,6 +587,835 @@ paths:
       summary: Login user
       tags:
       - auth
+  /api/master/attribute-volunteers:
+    get:
+      description: Get paginated list of attribute volunteer
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all attribute volunteer
+      tags:
+      - attribute-volunteer
+    post:
+      consumes:
+      - application/json
+      description: Create new attribute volunteer
+      parameters:
+      - description: Create attribute volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/attributevolunteer.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create attribute volunteer
+      tags:
+      - attribute-volunteer
+  /api/master/attribute-volunteers/{id}:
+    delete:
+      description: Soft delete attribute volunteer
+      parameters:
+      - description: Attribute Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete attribute volunteer
+      tags:
+      - attribute-volunteer
+    get:
+      description: Get detail attribute volunteer
+      parameters:
+      - description: Attribute Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get attribute volunteer by ID
+      tags:
+      - attribute-volunteer
+    put:
+      consumes:
+      - application/json
+      description: Update existing attribute volunteer
+      parameters:
+      - description: Attribute Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update attribute volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/attributevolunteer.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update attribute volunteer
+      tags:
+      - attribute-volunteer
+  /api/master/category-activities:
+    get:
+      description: Get paginated list of category activity
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all category activity
+      tags:
+      - category-activity
+    post:
+      consumes:
+      - application/json
+      description: Create new category activity
+      parameters:
+      - description: Create category activity
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/categoryactivity.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create category activity
+      tags:
+      - category-activity
+  /api/master/category-activities/{id}:
+    delete:
+      description: Soft delete category activity
+      parameters:
+      - description: Category Activity ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete category activity
+      tags:
+      - category-activity
+    get:
+      description: Get detail category activity
+      parameters:
+      - description: Category Activity ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get category activity by ID
+      tags:
+      - category-activity
+    put:
+      consumes:
+      - application/json
+      description: Update existing category activity
+      parameters:
+      - description: Category Activity ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update category activity
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/categoryactivity.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update category activity
+      tags:
+      - category-activity
+  /api/master/level-areas:
+    get:
+      description: Get list of level area
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all level area
+      tags:
+      - level-area
+    post:
+      consumes:
+      - application/json
+      description: Create new level area
+      parameters:
+      - description: Create level area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/levelarea.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create level area
+      tags:
+      - level-area
+  /api/master/level-areas/{id}:
+    delete:
+      description: Soft delete level area
+      parameters:
+      - description: Level Area ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete level area
+      tags:
+      - level-area
+    get:
+      description: Get detail level area
+      parameters:
+      - description: Level Area ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get level area by ID
+      tags:
+      - level-area
+    put:
+      consumes:
+      - application/json
+      description: Update existing level area
+      parameters:
+      - description: Level Area ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update level area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/levelarea.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update level area
+      tags:
+      - level-area
+  /api/master/level-volunteers:
+    get:
+      description: Get paginated list of level volunteer
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all level volunteer
+      tags:
+      - level-volunteer
+    post:
+      consumes:
+      - application/json
+      description: Create new level volunteer
+      parameters:
+      - description: Create level volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/levelvolunteer.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create level volunteer
+      tags:
+      - level-volunteer
+  /api/master/level-volunteers/{id}:
+    delete:
+      description: Soft delete level volunteer
+      parameters:
+      - description: Level Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete level volunteer
+      tags:
+      - level-volunteer
+    get:
+      description: Get detail level volunteer
+      parameters:
+      - description: Level Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get level volunteer by ID
+      tags:
+      - level-volunteer
+    put:
+      consumes:
+      - application/json
+      description: Update existing level volunteer
+      parameters:
+      - description: Level Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update level volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/levelvolunteer.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update level volunteer
+      tags:
+      - level-volunteer
+  /api/master/master-activities:
+    get:
+      description: Get paginated list of master activity
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all master activity
+      tags:
+      - master-activity
+    post:
+      consumes:
+      - application/json
+      description: Create new master activity
+      parameters:
+      - description: Create master activity
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masteractivity.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create master activity
+      tags:
+      - master-activity
+  /api/master/master-activities/{id}:
+    delete:
+      description: Soft delete master activity
+      parameters:
+      - description: Master Activity ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete master activity
+      tags:
+      - master-activity
+    get:
+      description: Get detail master activity
+      parameters:
+      - description: Master Activity ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get master activity by ID
+      tags:
+      - master-activity
+    put:
+      consumes:
+      - application/json
+      description: Update existing master activity
+      parameters:
+      - description: Master Activity ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update master activity
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masteractivity.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update master activity
+      tags:
+      - master-activity
+  /api/master/master-areas:
+    get:
+      description: Get list of master area
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all master area
+      tags:
+      - master-area
+    post:
+      consumes:
+      - application/json
+      description: Create new master area
+      parameters:
+      - description: Create master area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterarea.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create master area
+      tags:
+      - master-area
+  /api/master/master-areas/{id}:
+    delete:
+      description: Soft delete master area
+      parameters:
+      - description: Master Area ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete master area
+      tags:
+      - master-area
+    get:
+      description: Get detail master area
+      parameters:
+      - description: Master Area ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get master area by ID
+      tags:
+      - master-area
+    put:
+      consumes:
+      - application/json
+      description: Update existing master area
+      parameters:
+      - description: Master Area ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update master area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterarea.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update master area
+      tags:
+      - master-area
+  /api/master/religions:
+    get:
+      description: Get paginated list of religion
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all religion
+      tags:
+      - religion
+    post:
+      consumes:
+      - application/json
+      description: Create new religion
+      parameters:
+      - description: Create religion
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/religion.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create religion
+      tags:
+      - religion
+  /api/master/religions/{id}:
+    delete:
+      description: Soft delete religion
+      parameters:
+      - description: Religion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete religion
+      tags:
+      - religion
+    get:
+      description: Get detail religion
+      parameters:
+      - description: Religion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get religion by ID
+      tags:
+      - religion
+    put:
+      consumes:
+      - application/json
+      description: Update existing religion
+      parameters:
+      - description: Religion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update religion
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/religion.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update religion
+      tags:
+      - religion
   /api/register:
     post:
       consumes:
@@ -64,7 +1427,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/user.RegisterRequest'
+          $ref: '#/definitions/auth.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -114,6 +1477,127 @@ paths:
       summary: Get user by ID
       tags:
       - users
+  /api/volunteers:
+    get:
+      description: Get paginated list of volunteer
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all volunteer
+      tags:
+      - volunteer
+    post:
+      consumes:
+      - application/json
+      description: Create new volunteer
+      parameters:
+      - description: Create volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/volunteer.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create volunteer
+      tags:
+      - volunteer
+  /api/volunteers/{id}:
+    delete:
+      description: Soft delete volunteer
+      parameters:
+      - description: Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete volunteer
+      tags:
+      - volunteer
+    get:
+      description: Get detail volunteer
+      parameters:
+      - description: Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get volunteer by ID
+      tags:
+      - volunteer
+    put:
+      consumes:
+      - application/json
+      description: Update existing volunteer
+      parameters:
+      - description: Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/volunteer.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update volunteer
+      tags:
+      - volunteer
 securityDefinitions:
   BearerAuth:
     in: header

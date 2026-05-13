@@ -1,6 +1,9 @@
 package levelarea
 
-import "context"
+import (
+	"context"
+	"social-be/internal/pkg/pagination"
+)
 
 type Service struct {
 	Repo Repository
@@ -12,6 +15,15 @@ func (s *Service) Create(ctx context.Context, req CreateRequest, actorID int) (*
 
 func (s *Service) GetAll(ctx context.Context) ([]LevelArea, error) {
 	return s.Repo.GetAll(ctx)
+}
+
+func (s *Service) GetPaginated(ctx context.Context, page pagination.Query) ([]LevelArea, pagination.Meta, error) {
+	items, total, err := s.Repo.GetPaginated(ctx, page)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+
+	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
 }
 
 func (s *Service) GetByID(ctx context.Context, id int) (*LevelArea, error) {

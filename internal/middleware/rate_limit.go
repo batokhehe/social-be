@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"net/http"
+	"social-be/internal/pkg/apperror"
 	"social-be/internal/pkg/cache"
+	"social-be/internal/pkg/response"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,10 +22,7 @@ func RateLimitMiddleware() gin.HandlerFunc {
 		}
 
 		if count > 60 { // max 60 request / menit
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error": "too many requests",
-			})
-			c.Abort()
+			response.AbortError(c, apperror.New(http.StatusTooManyRequests, apperror.CodeRateLimited, "too many requests"))
 			return
 		}
 

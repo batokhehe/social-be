@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 )
 
 func LoggerMiddleware() gin.HandlerFunc {
@@ -14,14 +14,13 @@ func LoggerMiddleware() gin.HandlerFunc {
 
 		c.Next()
 
-		requestID, _ := c.Get("request_id")
-
-		logger.Log.Info("request",
-			zap.String("path", c.Request.URL.Path),
-			zap.String("method", c.Request.Method),
-			zap.Int("status", c.Writer.Status()),
-			zap.Duration("latency", time.Since(start)),
-			zap.Any("request_id", requestID),
-		)
+		logger.FromContext(c.Request.Context()).WithFields(logrus.Fields{
+			"path":       c.Request.URL.Path,
+			"method":     c.Request.Method,
+			"status":     c.Writer.Status(),
+			"latency_ms": time.Since(start).Milliseconds(),
+			"client_ip":  c.ClientIP(),
+			"user_agent": c.Request.UserAgent(),
+		}).Info("request")
 	}
 }

@@ -1,5 +1,13 @@
 #!/bin/bash
 
+echo "🧸 Running unit tests..."
+go test ./...
+
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Docker build aborted."
+  exit 1
+fi
+
 echo "🛑 Stopping containers..."
 docker compose down
 

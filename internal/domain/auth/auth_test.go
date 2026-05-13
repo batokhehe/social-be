@@ -1,0 +1,6 @@
+package auth
+
+import "testing"
+
+func TestAuthPackage(t *testing.T) {
+}

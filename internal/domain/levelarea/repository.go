@@ -3,7 +3,7 @@ package levelarea
 import (
 	"context"
 	"errors"
-	"fmt"
+	"social-be/internal/pkg/pagination"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, actorID int) (*LevelArea, error)
 	GetAll(ctx context.Context) ([]LevelArea, error)
+	GetPaginated(ctx context.Context, page pagination.Query) ([]LevelArea, int64, error)
 	GetByID(ctx context.Context, id int) (*LevelArea, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*LevelArea, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
@@ -60,52 +61,89 @@ func toEntity(item levelAreaModel) LevelArea {
 }
 
 func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID int) (*LevelArea, error) {
-	status := req.Status
-	if status == "" {
-		status = "active"
-	}
-
-	level := req.Level
-	if level == 0 {
-		level = 1
-	}
+	r.Logger.Infof(
+		"[LEVEL_AREA][CREATE] start create actor=%d",
+		actorID,
+	)
 
 	item := levelAreaModel{
-		Level:       level,
 		Name:        req.Name,
 		Description: req.Description,
-		Status:      status,
+		Status:      defaultString(req.Status, "active"),
 		CreatedBy:   &actorID,
 		UpdatedBy:   &actorID,
 	}
 
 	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		insertLevel := 1
+
+		// kalau insert di bawah item tertentu
 		if req.BelowLevelAreaID != nil {
+
 			var anchor levelAreaModel
+
 			if err := tx.
 				Where("id = ? AND deleted_at IS NULL", *req.BelowLevelAreaID).
 				First(&anchor).Error; err != nil {
-				return fmt.Errorf("anchor not found: %w", err)
+
+				r.Logger.WithError(err).Error(
+					"[LEVEL_AREA][CREATE] anchor not found",
+				)
+
+				return err
 			}
 
-			insertLevel := anchor.Level + 1
+			insertLevel = anchor.Level + 1
+		} else {
 
-			if err := tx.Model(&levelAreaModel{}).
-				Where("deleted_at IS NULL AND level >= ?", insertLevel).
-				Update("level", gorm.Expr("level + 1")).Error; err != nil {
-				return fmt.Errorf("failed shift level: %w", err)
-			}
+			// append ke bawah
+			var maxLevel int
 
-			item.Level = insertLevel
+			tx.Model(&levelAreaModel{}).
+				Select("COALESCE(MAX(level),0)").
+				Where("deleted_at IS NULL").
+				Scan(&maxLevel)
+
+			insertLevel = maxLevel + 1
 		}
 
-		result := tx.Create(&item)
-		if result.Error != nil {
-			return fmt.Errorf("failed insert level area: %w", result.Error)
+		r.Logger.Infof(
+			"[LEVEL_AREA][CREATE] insert level=%d",
+			insertLevel,
+		)
+
+		// geser level setelah posisi insert
+		if err := tx.Exec(`
+			UPDATE level_areas
+			SET level = level + 1
+			WHERE deleted_at IS NULL
+			AND level >= ?
+		`, insertLevel).Error; err != nil {
+
+			r.Logger.WithError(err).Error(
+				"[LEVEL_AREA][CREATE] failed shift levels",
+			)
+
+			return err
 		}
-		if result.RowsAffected == 0 {
-			return errors.New("insert failed: no rows affected")
+
+		item.Level = insertLevel
+
+		if err := tx.Create(&item).Error; err != nil {
+
+			r.Logger.WithError(err).Error(
+				"[LEVEL_AREA][CREATE] failed insert database",
+			)
+
+			return err
 		}
+
+		r.Logger.Infof(
+			"[LEVEL_AREA][CREATE] success create id=%d level=%d",
+			item.ID,
+			item.Level,
+		)
 
 		return nil
 	})
@@ -116,10 +154,13 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 	}
 
 	out := toEntity(item)
+
 	return &out, nil
 }
 
 func (r *GormRepository) GetAll(ctx context.Context) ([]LevelArea, error) {
+	r.Logger.Info("[LEVEL_AREA][GET_ALL] fetching all data")
+
 	var rows []levelAreaModel
 
 	err := r.DB.WithContext(ctx).
@@ -128,8 +169,49 @@ func (r *GormRepository) GetAll(ctx context.Context) ([]LevelArea, error) {
 		Find(&rows).Error
 
 	if err != nil {
-		r.Logger.WithError(err).Error("GetAll LevelArea failed")
-		return nil, fmt.Errorf("failed get all level area: %w", err)
+
+		r.Logger.WithError(err).Error(
+			"[LEVEL_AREA][GET_ALL] failed fetch data",
+		)
+
+		return nil, err
+	}
+
+	items := make([]LevelArea, 0, len(rows))
+
+	for _, row := range rows {
+		items = append(items, toEntity(row))
+	}
+
+	r.Logger.Infof(
+		"[LEVEL_AREA][GET_ALL] total=%d",
+		len(items),
+	)
+
+	return items, nil
+}
+
+func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query) ([]LevelArea, int64, error) {
+	r.Logger.WithFields(logrus.Fields{
+		"page":  page.Page,
+		"limit": page.Limit,
+	}).Info("[LEVEL_AREA][GET_PAGINATED] fetching data")
+
+	var total int64
+	baseQuery := r.DB.WithContext(ctx).Model(&levelAreaModel{}).Where("deleted_at IS NULL")
+	if err := baseQuery.Count(&total).Error; err != nil {
+		r.Logger.WithError(err).Error("[LEVEL_AREA][GET_PAGINATED] failed count data")
+		return nil, 0, err
+	}
+
+	var rows []levelAreaModel
+	if err := baseQuery.
+		Order("level ASC").
+		Limit(page.Limit).
+		Offset(page.Offset).
+		Find(&rows).Error; err != nil {
+		r.Logger.WithError(err).Error("[LEVEL_AREA][GET_PAGINATED] failed fetch data")
+		return nil, 0, err
 	}
 
 	items := make([]LevelArea, 0, len(rows))
@@ -137,79 +219,245 @@ func (r *GormRepository) GetAll(ctx context.Context) ([]LevelArea, error) {
 		items = append(items, toEntity(row))
 	}
 
-	return items, nil
+	return items, total, nil
 }
 
 func (r *GormRepository) GetByID(ctx context.Context, id int) (*LevelArea, error) {
+	r.Logger.Infof(
+		"[LEVEL_AREA][GET_BY_ID] id=%d",
+		id,
+	)
+
 	var item levelAreaModel
 
 	err := r.DB.WithContext(ctx).
 		Where("id = ? AND deleted_at IS NULL", id).
-		Take(&item).Error
+		First(&item).Error
 
 	if err != nil {
+
+		r.Logger.WithError(err).Error(
+			"[LEVEL_AREA][GET_BY_ID] failed fetch data",
+		)
+
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-		return nil, fmt.Errorf("failed get level area by id: %w", err)
+
+		return nil, err
 	}
 
 	out := toEntity(item)
+
 	return &out, nil
 }
 
 func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*LevelArea, error) {
-	status := req.Status
-	if status == "" {
-		status = "active"
-	}
+	r.Logger.Infof(
+		"[LEVEL_AREA][UPDATE] start update id=%d actor=%d",
+		id,
+		actorID,
+	)
 
-	updates := map[string]any{
-		"level":       req.Level,
-		"name":        req.Name,
-		"description": req.Description,
-		"status":      status,
-		"updated_by":  actorID,
-		"updated_at":  time.Now(),
-	}
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
-	tx := r.DB.WithContext(ctx).
-		Model(&levelAreaModel{}).
-		Where("id = ? AND deleted_at IS NULL", id).
-		Updates(updates)
+		var current levelAreaModel
 
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed update level area: %w", tx.Error)
-	}
+		if err := tx.
+			Where("id = ? AND deleted_at IS NULL", id).
+			First(&current).Error; err != nil {
 
-	if tx.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
+			r.Logger.WithError(err).Error(
+				"[LEVEL_AREA][UPDATE] failed get current data",
+			)
+
+			return err
+		}
+
+		newLevel := current.Level
+
+		// kalau pindah posisi
+		if req.BelowLevelAreaID != nil {
+
+			var anchor levelAreaModel
+
+			if err := tx.
+				Where("id = ? AND deleted_at IS NULL", *req.BelowLevelAreaID).
+				First(&anchor).Error; err != nil {
+
+				r.Logger.WithError(err).Error(
+					"[LEVEL_AREA][UPDATE] anchor not found",
+				)
+
+				return err
+			}
+
+			newLevel = anchor.Level + 1
+		}
+
+		r.Logger.Infof(
+			"[LEVEL_AREA][UPDATE] current=%d new=%d",
+			current.Level,
+			newLevel,
+		)
+
+		// kalau level berubah
+		if newLevel != current.Level {
+
+			// kosongin sementara level item sekarang
+			if err := tx.Model(&levelAreaModel{}).
+				Where("id = ?", current.ID).
+				Update("level", 0).Error; err != nil {
+
+				r.Logger.WithError(err).Error(
+					"[LEVEL_AREA][UPDATE] failed clear current level",
+				)
+
+				return err
+			}
+
+			// kalau pindah ke atas
+			if newLevel < current.Level {
+
+				if err := tx.Exec(`
+					UPDATE level_areas
+					SET level = level + 1
+					WHERE deleted_at IS NULL
+					AND id <> ?
+					AND level >= ?
+					AND level < ?
+				`, current.ID, newLevel, current.Level).Error; err != nil {
+
+					r.Logger.WithError(err).Error(
+						"[LEVEL_AREA][UPDATE] failed shift up",
+					)
+
+					return err
+				}
+			}
+
+			// kalau pindah ke bawah
+			if newLevel > current.Level {
+
+				if err := tx.Exec(`
+					UPDATE level_areas
+					SET level = level - 1
+					WHERE deleted_at IS NULL
+					AND id <> ?
+					AND level <= ?
+					AND level > ?
+				`, current.ID, newLevel, current.Level).Error; err != nil {
+
+					r.Logger.WithError(err).Error(
+						"[LEVEL_AREA][UPDATE] failed shift down",
+					)
+
+					return err
+				}
+			}
+		}
+
+		updates := map[string]any{
+			"level":       newLevel,
+			"name":        req.Name,
+			"description": req.Description,
+			"status":      defaultString(req.Status, current.Status),
+			"updated_by":  actorID,
+			"updated_at":  time.Now(),
+		}
+
+		if err := tx.Model(&levelAreaModel{}).
+			Where("id = ?", id).
+			Updates(updates).Error; err != nil {
+
+			r.Logger.WithError(err).Error(
+				"[LEVEL_AREA][UPDATE] failed update database",
+			)
+
+			return err
+		}
+
+		r.Logger.Infof(
+			"[LEVEL_AREA][UPDATE] success update id=%d",
+			id,
+		)
+
+		return nil
+	})
+
+	if err != nil {
+		r.Logger.WithError(err).Error("Update LevelArea failed")
+		return nil, err
 	}
 
 	return r.GetByID(ctx, id)
 }
 
 func (r *GormRepository) SoftDelete(ctx context.Context, id int, actorID int) error {
-	updates := map[string]any{
-		"deleted_at": time.Now(),
-		"deleted_by": actorID,
-		"updated_by": actorID,
-		"updated_at": time.Now(),
-		"status":     "inactive",
+	r.Logger.Infof(
+		"[LEVEL_AREA][DELETE] start delete id=%d actor=%d",
+		id,
+		actorID,
+	)
+
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		var current levelAreaModel
+
+		if err := tx.
+			Where("id = ? AND deleted_at IS NULL", id).
+			First(&current).Error; err != nil {
+
+			r.Logger.WithError(err).Error(
+				"[LEVEL_AREA][DELETE] failed get current data",
+			)
+
+			return err
+		}
+
+		if err := tx.Model(&levelAreaModel{}).
+			Where("id = ?", id).
+			Updates(map[string]any{
+				"deleted_at": time.Now(),
+				"deleted_by": actorID,
+				"status":     "inactive",
+			}).Error; err != nil {
+
+			r.Logger.WithError(err).Error(
+				"[LEVEL_AREA][DELETE] failed soft delete",
+			)
+
+			return err
+		}
+
+		// normalize level
+		if err := tx.Exec(`
+			UPDATE level_areas
+			SET level = level - 1
+			WHERE deleted_at IS NULL
+			AND level > ?
+		`, current.Level).Error; err != nil {
+
+			r.Logger.WithError(err).Error(
+				"[LEVEL_AREA][DELETE] failed normalize levels",
+			)
+
+			return err
+		}
+
+		r.Logger.Infof(
+			"[LEVEL_AREA][DELETE] success delete id=%d",
+			id,
+		)
+
+		return nil
+	})
+}
+
+func defaultString(val, def string) string {
+	if val == "" {
+		return def
 	}
 
-	tx := r.DB.WithContext(ctx).
-		Model(&levelAreaModel{}).
-		Where("id = ? AND deleted_at IS NULL", id).
-		Updates(updates)
-
-	if tx.Error != nil {
-		return fmt.Errorf("failed soft delete: %w", tx.Error)
-	}
-
-	if tx.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-
-	return nil
+	return val
 }

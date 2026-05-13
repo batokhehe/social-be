@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"social-be/internal/pkg/apperror"
+	"social-be/internal/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,21 +12,18 @@ func RoleMiddleware(requiredRole int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		roleVal, exists := c.Get("role")
 		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{"error": "role not found"})
-			c.Abort()
+			response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "role not found"))
 			return
 		}
 
 		role, ok := roleVal.(int)
 		if !ok {
-			c.JSON(http.StatusForbidden, gin.H{"error": "invalid role"})
-			c.Abort()
+			response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "invalid role"))
 			return
 		}
 
 		if role != requiredRole {
-			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
-			c.Abort()
+			response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "forbidden"))
 			return
 		}
 

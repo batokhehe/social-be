@@ -6,11 +6,15 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      NAS_MOUNT_PATH: /mnt/nas
     depends_on:
       redis:
         condition: service_healthy
       db:
         condition: service_healthy
+    volumes:
+      - /mnt/nas:/mnt/nas
 
   redis:
     image: redis:7-alpine

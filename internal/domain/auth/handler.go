@@ -1,37 +1,23 @@
 package auth
 
 import (
-	"social-be/internal/domain/user"
+	"net/http"
+	"social-be/internal/pkg/apperror"
 	"social-be/internal/pkg/logger"
 	"social-be/internal/pkg/response"
-	"social-be/internal/pkg/security"
+	"social-be/internal/pkg/validation"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
-	"go.uber.org/zap"
 )
 
-type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
 type Handler struct {
-	UserService *user.Service
+	Service *Service
 }
-
-var validate = validator.New()
 
 func bindAndValidate(c *gin.Context, req interface{}) bool {
-	if err := c.ShouldBindJSON(req); err != nil {
-		logger.Log.Error("invalid request body", zap.Error(err))
-		response.Error(c, "REQ_001", "invalid request body")
-		return false
-	}
-
-	if err := validate.Struct(req); err != nil {
-		logger.Log.Warn("validation failed", zap.Error(err))
-		response.Error(c, "REQ_002", "validation failed")
+	if err := validation.BindJSON(c, req); err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Warn("invalid request")
+		response.AbortError(c, err)
 		return false
 	}
 
@@ -44,24 +30,25 @@ func bindAndValidate(c *gin.Context, req interface{}) bool {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body user.RegisterRequest true "Register request"
+// @Param request body RegisterRequest true "Register request"
 // @Success 200 {object} map[string]interface{}
 // @Router /api/register [post]
 func (h *Handler) Register(c *gin.Context) {
-	var req user.RegisterRequest
+	var req RegisterRequest
 
 	if ok := bindAndValidate(c, &req); !ok {
 		return
 	}
 
-	// 🔹 Service
-	if err := h.UserService.Register(req.Name, req.Email, req.Password); err != nil {
-		logger.Log.Error("register failed", zap.Error(err))
-		response.Error(c, "SYS_001", "failed to register user")
+	ctx := c.Request.Context()
+
+	if err := h.Service.Register(ctx, req); err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("register failed")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, apperror.CodeInternal, "failed to register user"))
 		return
 	}
 
-	logger.Log.Info("user registered", zap.String("email", req.Email))
+	logger.FromContext(c.Request.Context()).WithField("email", req.Email).Info("user registered")
 
 	response.Success(c, gin.H{
 		"message": "user registered",
@@ -84,62 +71,48 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	// 🔹 Service
-	accessToken, refreshToken, err := h.UserService.Login(req.Email, req.Password)
+	ctx := c.Request.Context()
+
+	token, err := h.Service.Login(ctx, req)
 	if err != nil {
-		response.Error(c, "AUTH_001", "invalid credentials")
+		response.AbortError(c, apperror.Wrap(err, http.StatusUnauthorized, apperror.CodeUnauthorized, "invalid credentials"))
 		return
 	}
-	logger.Log.Info("login success", zap.String("email", req.Email))
+	logger.FromContext(c.Request.Context()).WithField("email", req.Email).Info("login success")
 
-	response.Success(c, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-	})
+	result := gin.H{
+		"access_token":  token.AccessToken,
+		"refresh_token": token.RefreshToken,
+	}
+
+	if token.User != nil {
+		result["user"] = token.User
+	}
+
+	if token.Data != nil {
+		result["data"] = token.Data
+	}
+
+	response.Success(c, result)
 }
 
 func (h *Handler) Refresh(c *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
+	var req RefreshRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, "REQ_001", "invalid request")
+	if ok := bindAndValidate(c, &req); !ok {
 		return
 	}
 
-	claims, err := security.ParseToken(req.RefreshToken)
+	ctx := c.Request.Context()
+
+	token, err := h.Service.Refresh(ctx, req)
 	if err != nil {
-		response.Error(c, "AUTH_002", "invalid refresh token")
-		return
-	}
-
-	if claims["type"] != "refresh" {
-		response.Error(c, "AUTH_003", "invalid token type")
-		return
-	}
-
-	userID, err := security.GetIntClaim(claims, "user_id")
-	if err != nil {
-		response.Error(c, "AUTH_004", "invalid user in token")
-		return
-	}
-
-	user, err := h.UserService.Repo.GetByID(userID)
-	if err != nil {
-		logger.Log.Error("refresh failed to load user", zap.Error(err), zap.Int("user_id", userID))
-		response.Error(c, "AUTH_005", "failed to refresh token")
-		return
-	}
-
-	newAccess, err := security.GenerateAccessToken(user.ID, user.Email, user.Role)
-	if err != nil {
-		logger.Log.Error("failed to generate access token", zap.Error(err), zap.Int("user_id", userID))
-		response.Error(c, "AUTH_005", "failed to refresh token")
+		logger.FromContext(c.Request.Context()).WithError(err).Error("refresh failed")
+		response.AbortError(c, apperror.Wrap(err, http.StatusUnauthorized, apperror.CodeRefreshFailed, "failed to refresh token"))
 		return
 	}
 
 	response.Success(c, gin.H{
-		"access_token": newAccess,
+		"access_token": token.AccessToken,
 	})
 }

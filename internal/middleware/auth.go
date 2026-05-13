@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"social-be/internal/pkg/apperror"
+	"social-be/internal/pkg/response"
 	"social-be/internal/pkg/security"
 	"strings"
 
@@ -12,43 +14,37 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
-			c.Abort()
+			response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeUnauthorized, "missing token"))
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token format"})
-			c.Abort()
+			response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeUnauthorized, "invalid token format"))
 			return
 		}
 
 		claims, err := security.ParseToken(parts[1])
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			c.Abort()
+			response.AbortError(c, apperror.Wrap(err, http.StatusUnauthorized, apperror.CodeUnauthorized, "invalid token"))
 			return
 		}
 
 		userID, err := security.GetIntClaim(claims, "user_id")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			c.Abort()
+			response.AbortError(c, apperror.Wrap(err, http.StatusUnauthorized, apperror.CodeUnauthorized, "invalid token"))
 			return
 		}
 
 		email, err := security.GetStringClaim(claims, "email")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			c.Abort()
+			response.AbortError(c, apperror.Wrap(err, http.StatusUnauthorized, apperror.CodeUnauthorized, "invalid token"))
 			return
 		}
 
 		role, err := security.GetIntClaim(claims, "role")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			c.Abort()
+			response.AbortError(c, apperror.Wrap(err, http.StatusUnauthorized, apperror.CodeUnauthorized, "invalid token"))
 			return
 		}
 

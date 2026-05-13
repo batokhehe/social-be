@@ -3,7 +3,10 @@ package middleware
 import (
 	"crypto/rand"
 	"encoding/hex"
+
 	"github.com/gin-gonic/gin"
+
+	"social-be/internal/pkg/logger"
 )
 
 const requestIDHeader = "X-Request-ID"
@@ -17,6 +20,7 @@ func RequestIDMiddleware() gin.HandlerFunc {
 
 		c.Set("request_id", requestID)
 		c.Header(requestIDHeader, requestID)
+		c.Request = c.Request.WithContext(logger.WithRequestID(c.Request.Context(), requestID))
 		c.Next()
 	}
 }

@@ -43,6 +43,1315 @@
                 }
             }
         },
+        "/api/master/attribute-volunteers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of attribute volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attribute-volunteer"
+                ],
+                "summary": "Get all attribute volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new attribute volunteer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attribute-volunteer"
+                ],
+                "summary": "Create attribute volunteer",
+                "parameters": [
+                    {
+                        "description": "Create attribute volunteer",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/attributevolunteer.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/attribute-volunteers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail attribute volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attribute-volunteer"
+                ],
+                "summary": "Get attribute volunteer by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Attribute Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing attribute volunteer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attribute-volunteer"
+                ],
+                "summary": "Update attribute volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Attribute Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update attribute volunteer",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/attributevolunteer.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete attribute volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attribute-volunteer"
+                ],
+                "summary": "Delete attribute volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Attribute Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/category-activities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of category activity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category-activity"
+                ],
+                "summary": "Get all category activity",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new category activity",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category-activity"
+                ],
+                "summary": "Create category activity",
+                "parameters": [
+                    {
+                        "description": "Create category activity",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/categoryactivity.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/category-activities/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail category activity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category-activity"
+                ],
+                "summary": "Get category activity by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Category Activity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing category activity",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category-activity"
+                ],
+                "summary": "Update category activity",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Category Activity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update category activity",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/categoryactivity.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete category activity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category-activity"
+                ],
+                "summary": "Delete category activity",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Category Activity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/level-areas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of level area",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-area"
+                ],
+                "summary": "Get all level area",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new level area",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-area"
+                ],
+                "summary": "Create level area",
+                "parameters": [
+                    {
+                        "description": "Create level area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/levelarea.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/level-areas/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail level area",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-area"
+                ],
+                "summary": "Get level area by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Level Area ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing level area",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-area"
+                ],
+                "summary": "Update level area",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Level Area ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update level area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/levelarea.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete level area",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-area"
+                ],
+                "summary": "Delete level area",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Level Area ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/level-volunteers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of level volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-volunteer"
+                ],
+                "summary": "Get all level volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new level volunteer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-volunteer"
+                ],
+                "summary": "Create level volunteer",
+                "parameters": [
+                    {
+                        "description": "Create level volunteer",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/levelvolunteer.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/level-volunteers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail level volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-volunteer"
+                ],
+                "summary": "Get level volunteer by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Level Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing level volunteer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-volunteer"
+                ],
+                "summary": "Update level volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Level Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update level volunteer",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/levelvolunteer.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete level volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-volunteer"
+                ],
+                "summary": "Delete level volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Level Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/master-activities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of master activity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-activity"
+                ],
+                "summary": "Get all master activity",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new master activity",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-activity"
+                ],
+                "summary": "Create master activity",
+                "parameters": [
+                    {
+                        "description": "Create master activity",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masteractivity.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/master-activities/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail master activity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-activity"
+                ],
+                "summary": "Get master activity by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Activity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing master activity",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-activity"
+                ],
+                "summary": "Update master activity",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Activity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update master activity",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masteractivity.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete master activity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-activity"
+                ],
+                "summary": "Delete master activity",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Activity ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/master-areas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of master area",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-area"
+                ],
+                "summary": "Get all master area",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new master area",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-area"
+                ],
+                "summary": "Create master area",
+                "parameters": [
+                    {
+                        "description": "Create master area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterarea.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/master-areas/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail master area",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-area"
+                ],
+                "summary": "Get master area by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Area ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing master area",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-area"
+                ],
+                "summary": "Update master area",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Area ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update master area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterarea.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete master area",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-area"
+                ],
+                "summary": "Delete master area",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Area ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/religions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of religion",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "religion"
+                ],
+                "summary": "Get all religion",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new religion",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "religion"
+                ],
+                "summary": "Create religion",
+                "parameters": [
+                    {
+                        "description": "Create religion",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/religion.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/master/religions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail religion",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "religion"
+                ],
+                "summary": "Get religion by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Religion ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing religion",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "religion"
+                ],
+                "summary": "Update religion",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Religion ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update religion",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/religion.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete religion",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "religion"
+                ],
+                "summary": "Delete religion",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Religion ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/register": {
             "post": {
                 "description": "Register new user",
@@ -63,7 +1372,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/user.RegisterRequest"
+                            "$ref": "#/definitions/auth.RegisterRequest"
                         }
                     }
                 ],
@@ -138,9 +1447,246 @@
                     }
                 }
             }
+        },
+        "/api/volunteers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volunteer"
+                ],
+                "summary": "Get all volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new volunteer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volunteer"
+                ],
+                "summary": "Create volunteer",
+                "parameters": [
+                    {
+                        "description": "Create volunteer",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/volunteer.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/volunteers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volunteer"
+                ],
+                "summary": "Get volunteer by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing volunteer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volunteer"
+                ],
+                "summary": "Update volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update volunteer",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/volunteer.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete volunteer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volunteer"
+                ],
+                "summary": "Delete volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Volunteer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "attributevolunteer.CreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "attributevolunteer.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
         "auth.LoginRequest": {
             "type": "object",
             "required": [
@@ -156,7 +1702,7 @@
                 }
             }
         },
-        "user.RegisterRequest": {
+        "auth.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -173,6 +1719,677 @@
                 "password": {
                     "type": "string",
                     "minLength": 6
+                }
+            }
+        },
+        "categoryactivity.CreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "categoryactivity.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "levelarea.CreateRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "name"
+            ],
+            "properties": {
+                "below_level_area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "levelarea.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "name"
+            ],
+            "properties": {
+                "below_level_area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "levelvolunteer.CreateRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "name"
+            ],
+            "properties": {
+                "below_level_volunteer_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "levelvolunteer.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "name"
+            ],
+            "properties": {
+                "below_level_volunteer_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "masteractivity.CreateRequest": {
+            "type": "object",
+            "required": [
+                "category_activity_id",
+                "name"
+            ],
+            "properties": {
+                "category_activity_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "masteractivity.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "category_activity_id",
+                "name"
+            ],
+            "properties": {
+                "category_activity_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "masterarea.CreateRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "level_area_id",
+                "location",
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "level_area_id": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "location": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "parent_id": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "masterarea.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "level_area_id",
+                "location",
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "level_area_id": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "location": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "parent_id": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "religion.CreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "religion.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "volunteer.CreateRequest": {
+            "type": "object",
+            "required": [
+                "attribute_volunteer_id",
+                "birth_date",
+                "birth_place",
+                "blood_type",
+                "email",
+                "field",
+                "free_times",
+                "indonesian_name",
+                "interested_activity_ids",
+                "languages",
+                "last_education",
+                "level_volunteer_id",
+                "marital_status",
+                "master_area_id",
+                "phone",
+                "postal_code",
+                "profession",
+                "religion_id",
+                "residential_address",
+                "rhesus",
+                "vis_id"
+            ],
+            "properties": {
+                "attribute_volunteer_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "birth_date": {
+                    "type": "string"
+                },
+                "birth_place": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "blood_type": {
+                    "type": "string",
+                    "enum": [
+                        "A",
+                        "B",
+                        "AB",
+                        "O"
+                    ]
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "field": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "free_times": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/volunteer.FreeTimeRequest"
+                    }
+                },
+                "home_phone": {
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "indonesian_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "interested_activity_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "languages": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "last_education": {
+                    "type": "string",
+                    "enum": [
+                        "SD",
+                        "SMP",
+                        "SMA",
+                        "D1",
+                        "D2",
+                        "D3",
+                        "D4",
+                        "S1",
+                        "S2",
+                        "S3"
+                    ]
+                },
+                "level_volunteer_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "mandarin_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "marital_status": {
+                    "type": "string",
+                    "enum": [
+                        "single",
+                        "married",
+                        "divorced",
+                        "widowed"
+                    ]
+                },
+                "master_area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "office_phone": {
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "postal_code": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "private_vehicle": {
+                    "type": "boolean"
+                },
+                "profession": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "regular_donor": {
+                    "type": "boolean"
+                },
+                "religion_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "residential_address": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "rhesus": {
+                    "type": "string",
+                    "enum": [
+                        "positive",
+                        "negative",
+                        "unknown"
+                    ]
+                },
+                "vis_id": {
+                    "type": "string",
+                    "maxLength": 50
+                }
+            }
+        },
+        "volunteer.FreeTimeRequest": {
+            "type": "object",
+            "required": [
+                "day_of_week",
+                "period"
+            ],
+            "properties": {
+                "day_of_week": {
+                    "type": "string",
+                    "enum": [
+                        "monday",
+                        "tuesday",
+                        "wednesday",
+                        "thursday",
+                        "friday",
+                        "saturday",
+                        "sunday"
+                    ]
+                },
+                "period": {
+                    "type": "string",
+                    "enum": [
+                        "morning",
+                        "afternoon",
+                        "evening"
+                    ]
+                }
+            }
+        },
+        "volunteer.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "attribute_volunteer_id",
+                "birth_date",
+                "birth_place",
+                "blood_type",
+                "email",
+                "field",
+                "free_times",
+                "indonesian_name",
+                "interested_activity_ids",
+                "languages",
+                "last_education",
+                "level_volunteer_id",
+                "marital_status",
+                "master_area_id",
+                "phone",
+                "postal_code",
+                "profession",
+                "religion_id",
+                "residential_address",
+                "rhesus",
+                "vis_id"
+            ],
+            "properties": {
+                "attribute_volunteer_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "birth_date": {
+                    "type": "string"
+                },
+                "birth_place": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "blood_type": {
+                    "type": "string",
+                    "enum": [
+                        "A",
+                        "B",
+                        "AB",
+                        "O"
+                    ]
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "field": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "free_times": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/volunteer.FreeTimeRequest"
+                    }
+                },
+                "home_phone": {
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "indonesian_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "interested_activity_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "languages": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "last_education": {
+                    "type": "string",
+                    "enum": [
+                        "SD",
+                        "SMP",
+                        "SMA",
+                        "D1",
+                        "D2",
+                        "D3",
+                        "D4",
+                        "S1",
+                        "S2",
+                        "S3"
+                    ]
+                },
+                "level_volunteer_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "mandarin_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "marital_status": {
+                    "type": "string",
+                    "enum": [
+                        "single",
+                        "married",
+                        "divorced",
+                        "widowed"
+                    ]
+                },
+                "master_area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "office_phone": {
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "postal_code": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "private_vehicle": {
+                    "type": "boolean"
+                },
+                "profession": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "regular_donor": {
+                    "type": "boolean"
+                },
+                "religion_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "residential_address": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "rhesus": {
+                    "type": "string",
+                    "enum": [
+                        "positive",
+                        "negative",
+                        "unknown"
+                    ]
+                },
+                "vis_id": {
+                    "type": "string",
+                    "maxLength": 50
                 }
             }
         }

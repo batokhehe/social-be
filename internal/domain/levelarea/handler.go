@@ -1,27 +1,23 @@
 package levelarea
 
 import (
+	"net/http"
+	"social-be/internal/pkg/apperror"
+	"social-be/internal/pkg/pagination"
 	"social-be/internal/pkg/response"
+	"social-be/internal/pkg/validation"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 )
 
 type Handler struct {
 	Service *Service
 }
 
-var validate = validator.New()
-
 func bindAndValidate(c *gin.Context, req interface{}) bool {
-	if err := c.ShouldBindJSON(req); err != nil {
-		response.Error(c, "REQ_001", "invalid request body")
-		return false
-	}
-
-	if err := validate.Struct(req); err != nil {
-		response.Error(c, "REQ_002", "validation failed")
+	if err := validation.BindJSON(c, req); err != nil {
+		response.AbortError(c, err)
 		return false
 	}
 
@@ -46,7 +42,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	actorID, ok := c.Get("user_id")
 	if !ok {
-		response.Error(c, "AUTH_004", "user not found")
+		response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeActorNotFound, "user not found"))
 		return
 	}
 
@@ -54,7 +50,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	result, err := h.Service.Create(ctx, req, actorID.(int))
 	if err != nil {
-		response.Error(c, "DB_101", "failed to create level area")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_101", "failed to create level area"))
 		return
 	}
 
@@ -72,13 +68,19 @@ func (h *Handler) Create(c *gin.Context) {
 func (h *Handler) GetAll(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	items, err := h.Service.GetAll(ctx)
-	if err != nil {
-		response.Error(c, "DB_102", "failed to fetch level area")
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
 		return
 	}
 
-	response.Success(c, items)
+	items, meta, err := h.Service.GetPaginated(ctx, page)
+	if err != nil {
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_102", "failed to fetch level area"))
+		return
+	}
+
+	response.SuccessWithPagination(c, items, meta)
 }
 
 // GetByID godoc
@@ -93,7 +95,7 @@ func (h *Handler) GetAll(c *gin.Context) {
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		response.Error(c, "REQ_003", "invalid id")
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid id"))
 		return
 	}
 
@@ -101,7 +103,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 	item, err := h.Service.GetByID(ctx, id)
 	if err != nil {
-		response.Error(c, "DB_103", "level area not found")
+		response.AbortError(c, apperror.Wrap(err, http.StatusNotFound, "DB_103", "level area not found"))
 		return
 	}
 
@@ -122,7 +124,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		response.Error(c, "REQ_003", "invalid id")
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid id"))
 		return
 	}
 
@@ -133,7 +135,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	actorID, ok := c.Get("user_id")
 	if !ok {
-		response.Error(c, "AUTH_004", "user not found")
+		response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeActorNotFound, "user not found"))
 		return
 	}
 
@@ -141,7 +143,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	item, err := h.Service.Update(ctx, id, req, actorID.(int))
 	if err != nil {
-		response.Error(c, "DB_104", "failed to update level area")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_104", "failed to update level area"))
 		return
 	}
 
@@ -160,20 +162,20 @@ func (h *Handler) Update(c *gin.Context) {
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		response.Error(c, "REQ_003", "invalid id")
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid id"))
 		return
 	}
 
 	actorID, ok := c.Get("user_id")
 	if !ok {
-		response.Error(c, "AUTH_004", "user not found")
+		response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeActorNotFound, "user not found"))
 		return
 	}
 
 	ctx := c.Request.Context()
 
 	if err := h.Service.SoftDelete(ctx, id, actorID.(int)); err != nil {
-		response.Error(c, "DB_105", "failed to delete level area")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_105", "failed to delete level area"))
 		return
 	}
 

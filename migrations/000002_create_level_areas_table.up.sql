@@ -11,5 +11,3 @@ CREATE TABLE IF NOT EXISTS level_areas (
     updated_at TIMESTAMP DEFAULT NOW(),
     deleted_at TIMESTAMP NULL
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_level_areas_level ON level_areas(level) WHERE deleted_at IS NULL;
