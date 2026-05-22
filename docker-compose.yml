@@ -7,14 +7,21 @@ services:
     env_file:
       - .env
     environment:
+      NAS_SHARE_PATH: //10.3.1.161/TzuChiApp
       NAS_MOUNT_PATH: /mnt/nas
+      NAS_SHARE_USER: ${NAS_SHARE_USER}
+      NAS_SHARE_PASSWORD: ${NAS_SHARE_PASSWORD}
+      NAS_SHARE_DOMAIN: ${NAS_SHARE_DOMAIN}
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
     depends_on:
       redis:
         condition: service_healthy
       db:
         condition: service_healthy
-    volumes:
-      - /mnt/nas:/mnt/nas
 
   redis:
     image: redis:7-alpine

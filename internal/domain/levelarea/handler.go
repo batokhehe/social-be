@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"social-be/internal/pkg/apperror"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 	"social-be/internal/pkg/response"
 	"social-be/internal/pkg/validation"
 	"strconv"
@@ -26,6 +27,7 @@ func bindAndValidate(c *gin.Context, req interface{}) bool {
 
 // Create godoc
 // @Summary Create level area
+
 // @Description Create new level area
 // @Tags level-area
 // @Accept json
@@ -33,7 +35,7 @@ func bindAndValidate(c *gin.Context, req interface{}) bool {
 // @Security BearerAuth
 // @Param request body CreateRequest true "Create level area"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-areas [post]
+// @Router /master/level-areas [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if ok := bindAndValidate(c, &req); !ok {
@@ -64,7 +66,7 @@ func (h *Handler) Create(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-areas [get]
+// @Router /master/level-areas [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -74,7 +76,13 @@ func (h *Handler) GetAll(c *gin.Context) {
 		return
 	}
 
-	items, meta, err := h.Service.GetPaginated(ctx, page)
+	filters, appErr := query.ParseFilters(c.Request.URL.Query(), levelAreaModel{})
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+
+	items, meta, err := h.Service.GetPaginated(ctx, page, filters)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_102", "failed to fetch level area"))
 		return
@@ -91,7 +99,7 @@ func (h *Handler) GetAll(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Level Area ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-areas/{id} [get]
+// @Router /master/level-areas/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -120,7 +128,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Param id path int true "Level Area ID"
 // @Param request body UpdateRequest true "Update level area"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-areas/{id} [put]
+// @Router /master/level-areas/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -158,7 +166,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Level Area ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-areas/{id} [delete]
+// @Router /master/level-areas/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

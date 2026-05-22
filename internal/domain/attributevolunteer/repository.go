@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -12,7 +13,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, actorID int) (*AttributeVolunteer, error)
-	GetPaginated(ctx context.Context, page pagination.Query) ([]AttributeVolunteer, int64, error)
+	GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]AttributeVolunteer, int64, error)
 	GetByID(ctx context.Context, id int) (*AttributeVolunteer, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*AttributeVolunteer, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
@@ -74,9 +75,10 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 	return &out, nil
 }
 
-func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query) ([]AttributeVolunteer, int64, error) {
+func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]AttributeVolunteer, int64, error) {
 	var total int64
 	baseQuery := r.DB.WithContext(ctx).Model(&attributeVolunteerModel{}).Where("deleted_at IS NULL")
+	baseQuery = query.ApplyFilters(baseQuery, filters)
 	if err := baseQuery.Count(&total).Error; err != nil {
 		r.Logger.WithError(err).Error("Count AttributeVolunteer failed")
 		return nil, 0, fmt.Errorf("failed count attribute volunteer: %w", err)

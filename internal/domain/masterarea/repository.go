@@ -45,6 +45,7 @@ type masterAreaModel struct {
 	Name        string     `gorm:"column:name"`
 	LevelAreaID string     `gorm:"column:level_area_id"`
 	Description string     `gorm:"column:description"`
+	Status      string     `gorm:"column:status"`
 	ParentID    *int       `gorm:"column:parent_id"`
 	Location    string     `gorm:"column:location"`
 	CreatedBy   *int       `gorm:"column:created_by"`
@@ -72,6 +73,7 @@ func toEntity(item masterAreaModel) MasterArea {
 		Name:        item.Name,
 		LevelAreaID: item.LevelAreaID,
 		Description: item.Description,
+		Status:      item.Status,
 		ParentID:    item.ParentID,
 		Location:    item.Location,
 		CreatedBy:   item.CreatedBy,
@@ -85,6 +87,7 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 		Name:        req.Name,
 		LevelAreaID: req.LevelAreaID,
 		Description: req.Description,
+		Status:      defaultString(req.Status, "active"),
 		ParentID:    req.ParentID,
 		Location:    req.Location,
 		CreatedBy:   &actorID,
@@ -198,6 +201,7 @@ func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, 
 			"name":          req.Name,
 			"level_area_id": req.LevelAreaID,
 			"description":   req.Description,
+			"status":        defaultString(req.Status, existing.Status),
 			"parent_id":     req.ParentID,
 			"location":      req.Location,
 			"updated_by":    actorID,
@@ -227,6 +231,7 @@ func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, 
 
 func (r *GormRepository) SoftDelete(ctx context.Context, id int, actorID int) error {
 	updates := map[string]any{
+		"status":     "inactive",
 		"deleted_at": time.Now(),
 		"deleted_by": actorID,
 		"updated_by": actorID,
@@ -248,6 +253,14 @@ func (r *GormRepository) SoftDelete(ctx context.Context, id int, actorID int) er
 	}
 
 	return nil
+}
+
+func defaultString(val, def string) string {
+	if val == "" {
+		return def
+	}
+
+	return val
 }
 
 func validateParent(ctx context.Context, tx *gorm.DB, levelAreaID string, parentID *int, currentID *int) error {

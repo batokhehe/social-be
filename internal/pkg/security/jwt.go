@@ -17,7 +17,8 @@ func GenerateAccessToken(userID int, email string, role int) (string, error) {
 		"email":   email,
 		"role":    role,
 		"type":    "access",
-		"exp":     time.Now().Add(15 * time.Minute).Unix(),
+		// "exp":     time.Now().Add(15 * time.Minute).Unix(),
+		"exp": time.Now().Add(24 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

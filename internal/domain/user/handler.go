@@ -8,14 +8,18 @@ import (
 	"social-be/internal/pkg/apperror"
 	"social-be/internal/pkg/logger"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 	"social-be/internal/pkg/response"
+	"social-be/internal/pkg/upload"
+	"social-be/internal/pkg/validation"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	Service *Service
+	Service       *Service
+	UploadService *upload.Service
 }
 
 // GetUsers godoc
@@ -25,7 +29,7 @@ type Handler struct {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /api/users [get]
+// @Router /users [get]
 func (h *Handler) GetUsers(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -35,7 +39,13 @@ func (h *Handler) GetUsers(c *gin.Context) {
 		return
 	}
 
-	users, meta, err := h.Service.GetPaginated(ctx, page)
+	filters, appErr := query.ParseFilters(c.Request.URL.Query(), userModel{})
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+
+	users, meta, err := h.Service.GetPaginated(ctx, page, filters)
 	if err != nil {
 		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to get users")
 
@@ -56,7 +66,7 @@ func (h *Handler) GetUsers(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "User ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/users/{id} [get]
+// @Router /users/{id} [get]
 func (h *Handler) GetUserByID(c *gin.Context) {
 	idParam := c.Param("id")
 
@@ -64,6 +74,30 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 	if err != nil {
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid id"))
 		return
+	}
+
+	roleVal, exists := c.Get("role")
+	if !exists {
+		response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "role not found"))
+		return
+	}
+	role, ok := roleVal.(int)
+	if !ok {
+		response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "invalid role"))
+		return
+	}
+
+	if role == 2 {
+		userIDVal, ok := c.Get("user_id")
+		if !ok {
+			response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeActorNotFound, "user not found"))
+			return
+		}
+		userID, ok := userIDVal.(int)
+		if !ok || userID != id {
+			response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "forbidden"))
+			return
+		}
 	}
 
 	ctx := c.Request.Context()
@@ -77,6 +111,64 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 	response.Success(c, user)
 }
 
+// GetCurrentUser godoc
+// @Summary Get current user profile
+// @Description Get authenticated user profile
+// @Tags users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /users/me [get]
+func (h *Handler) GetCurrentUser(c *gin.Context) {
+	userIDVal, ok := c.Get("user_id")
+	if !ok {
+		response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeActorNotFound, "user not found"))
+		return
+	}
+
+	userID, ok := userIDVal.(int)
+	if !ok {
+		response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeActorNotFound, "invalid user"))
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, err := h.Service.GetByID(ctx, userID)
+	if err != nil {
+		response.AbortError(c, apperror.Wrap(err, http.StatusNotFound, "DB_002", "user not found"))
+		return
+	}
+
+	response.Success(c, user)
+}
+
+// CreateUser godoc
+// @Summary Create user
+// @Description Create new user account by superadmin
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateRequest true "Create user request"
+// @Success 200 {object} map[string]interface{}
+// @Router /admin/users [post]
+func (h *Handler) CreateUser(c *gin.Context) {
+	var req CreateRequest
+	if err := validation.BindJSON(c, &req); err != nil {
+		response.AbortError(c, err)
+		return
+	}
+
+	ctx := c.Request.Context()
+	if err := h.Service.Register(ctx, req); err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("create user failed")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, apperror.CodeInternal, "failed to create user"))
+		return
+	}
+
+	response.Success(c, gin.H{"message": "user created"})
+}
+
 // UploadProfilePhoto godoc
 // @Summary Upload profile photo
 // @Description Upload profile photo to NAS and return URL
@@ -86,7 +178,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 // @Security BearerAuth
 // @Param profile_photo formData file true "Profile photo"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/users/upload-photo [post]
+// @Router /users/upload-photo [post]
 func (h *Handler) UploadProfilePhoto(c *gin.Context) {
 	file, err := c.FormFile("profile_photo")
 	if err != nil {
@@ -102,18 +194,18 @@ func (h *Handler) UploadProfilePhoto(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	// Call NAS API to store image
-	photoURL, err := h.Service.UploadPhotoToNAS(ctx, file)
+	// Call global upload service with "user" module
+	filePath, err := h.UploadService.UploadFile(ctx, file, "user")
 	if err != nil {
-		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to upload photo to NAS")
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to upload photo")
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, apperror.CodeInternal, "failed to upload photo"))
 		return
 	}
 
-	logger.FromContext(c.Request.Context()).WithField("url", photoURL).Info("photo uploaded successfully")
+	logger.FromContext(c.Request.Context()).WithField("path", filePath).Info("photo uploaded successfully")
 
 	response.Success(c, gin.H{
-		"profile_photo_url": photoURL,
+		"profile_photo_path": filePath,
 	})
 }
 

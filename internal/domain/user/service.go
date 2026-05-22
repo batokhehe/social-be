@@ -1,17 +1,13 @@
 package user
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime/multipart"
-	"net/http"
-	"os"
 	"social-be/internal/pkg/cache"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 	"social-be/internal/pkg/security"
 	"time"
 )
@@ -106,79 +102,8 @@ func (s *Service) GetAll(ctx context.Context) ([]User, error) {
 	return users, nil
 }
 
-func (s *Service) UploadPhotoToNAS(ctx context.Context, file *multipart.FileHeader) (string, error) {
-	// Open the uploaded file
-	src, err := file.Open()
-	if err != nil {
-		return "", fmt.Errorf("failed to open uploaded file: %w", err)
-	}
-	defer src.Close()
-
-	// Read file content
-	fileContent, err := io.ReadAll(src)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file content: %w", err)
-	}
-
-	// Prepare multipart form data for NAS API
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
-
-	// Add file field
-	fw, err := w.CreateFormFile("file", file.Filename)
-	if err != nil {
-		return "", fmt.Errorf("failed to create form file: %w", err)
-	}
-	if _, err := fw.Write(fileContent); err != nil {
-		return "", fmt.Errorf("failed to write file content: %w", err)
-	}
-
-	// Close the writer
-	w.Close()
-
-	// Get NAS API URL from environment
-	nasAPIURL := os.Getenv("NAS_API_URL")
-	if nasAPIURL == "" {
-		nasAPIURL = "http://localhost:8081/api/store-image" // Default NAS API URL
-	}
-
-	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, "POST", nasAPIURL, &b)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
-
-	// Send request
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to call NAS API: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("NAS API returned status %d", resp.StatusCode)
-	}
-
-	// Parse response
-	var nasResponse struct {
-		URL string `json:"url"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&nasResponse); err != nil {
-		return "", fmt.Errorf("failed to parse NAS response: %w", err)
-	}
-
-	if nasResponse.URL == "" {
-		return "", errors.New("NAS API did not return a valid URL")
-	}
-
-	return nasResponse.URL, nil
-}
-
-func (s *Service) GetPaginated(ctx context.Context, page pagination.Query) ([]User, pagination.Meta, error) {
-	users, total, err := s.Repo.GetPaginated(ctx, page)
+func (s *Service) GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]User, pagination.Meta, error) {
+	users, total, err := s.Repo.GetPaginated(ctx, page, filters)
 	if err != nil {
 		return nil, pagination.Meta{}, err
 	}

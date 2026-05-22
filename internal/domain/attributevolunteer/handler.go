@@ -6,6 +6,7 @@ import (
 
 	"social-be/internal/pkg/apperror"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 	"social-be/internal/pkg/response"
 	"social-be/internal/pkg/validation"
 
@@ -50,7 +51,7 @@ func actorID(c *gin.Context) (int, bool) {
 // @Security BearerAuth
 // @Param request body CreateRequest true "Create attribute volunteer"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/attribute-volunteers [post]
+// @Router /master/attribute-volunteers [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if ok := bindAndValidate(c, &req); !ok {
@@ -80,7 +81,7 @@ func (h *Handler) Create(c *gin.Context) {
 // @Param page query int false "Page number"
 // @Param limit query int false "Page size"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/attribute-volunteers [get]
+// @Router /master/attribute-volunteers [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	page, appErr := pagination.FromGin(c)
 	if appErr != nil {
@@ -88,7 +89,13 @@ func (h *Handler) GetAll(c *gin.Context) {
 		return
 	}
 
-	items, meta, err := h.Service.GetPaginated(c.Request.Context(), page)
+	filters, appErr := query.ParseFilters(c.Request.URL.Query(), attributeVolunteerModel{})
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+
+	items, meta, err := h.Service.GetPaginated(c.Request.Context(), page, filters)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_402", "failed to fetch attribute volunteer"))
 		return
@@ -105,7 +112,7 @@ func (h *Handler) GetAll(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Attribute Volunteer ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/attribute-volunteers/{id} [get]
+// @Router /master/attribute-volunteers/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -132,7 +139,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Param id path int true "Attribute Volunteer ID"
 // @Param request body UpdateRequest true "Update attribute volunteer"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/attribute-volunteers/{id} [put]
+// @Router /master/attribute-volunteers/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -167,7 +174,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Attribute Volunteer ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/attribute-volunteers/{id} [delete]
+// @Router /master/attribute-volunteers/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

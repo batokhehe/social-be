@@ -50,7 +50,7 @@ func actorID(c *gin.Context) (int, bool) {
 // @Security BearerAuth
 // @Param request body CreateRequest true "Create level volunteer"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-volunteers [post]
+// @Router /master/level-volunteers [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if ok := bindAndValidate(c, &req); !ok {
@@ -80,7 +80,7 @@ func (h *Handler) Create(c *gin.Context) {
 // @Param page query int false "Page number"
 // @Param limit query int false "Page size"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-volunteers [get]
+// @Router /master/level-volunteers [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	page, appErr := pagination.FromGin(c)
 	if appErr != nil {
@@ -105,7 +105,7 @@ func (h *Handler) GetAll(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Level Volunteer ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-volunteers/{id} [get]
+// @Router /master/level-volunteers/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -132,7 +132,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Param id path int true "Level Volunteer ID"
 // @Param request body UpdateRequest true "Update level volunteer"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-volunteers/{id} [put]
+// @Router /master/level-volunteers/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -167,7 +167,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Level Volunteer ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/level-volunteers/{id} [delete]
+// @Router /master/level-volunteers/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -13,7 +14,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, actorID int) (*LevelArea, error)
 	GetAll(ctx context.Context) ([]LevelArea, error)
-	GetPaginated(ctx context.Context, page pagination.Query) ([]LevelArea, int64, error)
+	GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]LevelArea, int64, error)
 	GetByID(ctx context.Context, id int) (*LevelArea, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*LevelArea, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
@@ -191,7 +192,7 @@ func (r *GormRepository) GetAll(ctx context.Context) ([]LevelArea, error) {
 	return items, nil
 }
 
-func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query) ([]LevelArea, int64, error) {
+func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]LevelArea, int64, error) {
 	r.Logger.WithFields(logrus.Fields{
 		"page":  page.Page,
 		"limit": page.Limit,
@@ -199,6 +200,8 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 
 	var total int64
 	baseQuery := r.DB.WithContext(ctx).Model(&levelAreaModel{}).Where("deleted_at IS NULL")
+	baseQuery = query.ApplyFilters(baseQuery, filters)
+
 	if err := baseQuery.Count(&total).Error; err != nil {
 		r.Logger.WithError(err).Error("[LEVEL_AREA][GET_PAGINATED] failed count data")
 		return nil, 0, err

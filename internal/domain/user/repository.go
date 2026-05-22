@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -13,7 +14,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, passwordHash string) error
 	GetAll(ctx context.Context) ([]User, error)
-	GetPaginated(ctx context.Context, page pagination.Query) ([]User, int64, error)
+	GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]User, int64, error)
 	GetByEmail(ctx context.Context, email string) (*User, string, int, error)
 	GetByID(ctx context.Context, id int) (*User, error)
 }
@@ -62,8 +63,12 @@ func toEntity(row userModel) User {
 }
 
 func (r *GormRepository) Create(ctx context.Context, req CreateRequest, passwordHash string) error {
-	row := userModel{Name: req.Name, Email: req.Email, PasswordHash: passwordHash, ProfilePhoto: req.ProfilePhoto}
-	if err := r.DB.WithContext(ctx).Select("name", "email", "password_hash", "profile_photo").Create(&row).Error; err != nil {
+	role := RoleVolunteer
+	if req.Role != nil {
+		role = *req.Role
+	}
+	row := userModel{Name: req.Name, Email: req.Email, PasswordHash: passwordHash, Role: role, ProfilePhoto: req.ProfilePhoto}
+	if err := r.DB.WithContext(ctx).Select("name", "email", "password_hash", "role", "profile_photo").Create(&row).Error; err != nil {
 		r.Logger.WithError(err).Error("Create User failed")
 		return fmt.Errorf("failed create user: %w", err)
 	}
@@ -89,9 +94,10 @@ func (r *GormRepository) GetAll(ctx context.Context) ([]User, error) {
 	return users, nil
 }
 
-func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query) ([]User, int64, error) {
+func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]User, int64, error) {
 	var total int64
 	baseQuery := r.DB.WithContext(ctx).Model(&userModel{}).Where("deleted_at IS NULL")
+	baseQuery = query.ApplyFilters(baseQuery, filters)
 	if err := baseQuery.Count(&total).Error; err != nil {
 		r.Logger.WithError(err).Error("Count User failed")
 		return nil, 0, fmt.Errorf("failed count user: %w", err)

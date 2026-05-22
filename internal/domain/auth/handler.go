@@ -32,7 +32,7 @@ func bindAndValidate(c *gin.Context, req interface{}) bool {
 // @Produce json
 // @Param request body RegisterRequest true "Register request"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/register [post]
+// @Router /register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 
@@ -63,7 +63,7 @@ func (h *Handler) Register(c *gin.Context) {
 // @Produce json
 // @Param request body LoginRequest true "Login request"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/login [post]
+// @Router /login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 

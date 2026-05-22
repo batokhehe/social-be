@@ -3,6 +3,7 @@ package attributevolunteer
 import (
 	"context"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 )
 
 type Service struct {
@@ -13,8 +14,8 @@ func (s *Service) Create(ctx context.Context, req CreateRequest, actorID int) (*
 	return s.Repo.Create(ctx, req, actorID)
 }
 
-func (s *Service) GetPaginated(ctx context.Context, page pagination.Query) ([]AttributeVolunteer, pagination.Meta, error) {
-	items, total, err := s.Repo.GetPaginated(ctx, page)
+func (s *Service) GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]AttributeVolunteer, pagination.Meta, error) {
+	items, total, err := s.Repo.GetPaginated(ctx, page, filters)
 	if err != nil {
 		return nil, pagination.Meta{}, err
 	}

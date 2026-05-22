@@ -50,7 +50,7 @@ func actorID(c *gin.Context) (int, bool) {
 // @Security BearerAuth
 // @Param request body CreateRequest true "Create religion"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/religions [post]
+// @Router /master/religions [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if ok := bindAndValidate(c, &req); !ok {
@@ -77,7 +77,7 @@ func (h *Handler) Create(c *gin.Context) {
 // @Param page query int false "Page number"
 // @Param limit query int false "Page size"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/religions [get]
+// @Router /master/religions [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	page, appErr := pagination.FromGin(c)
 	if appErr != nil {
@@ -100,7 +100,7 @@ func (h *Handler) GetAll(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Religion ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/religions/{id} [get]
+// @Router /master/religions/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -125,7 +125,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Param id path int true "Religion ID"
 // @Param request body UpdateRequest true "Update religion"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/religions/{id} [put]
+// @Router /master/religions/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -156,7 +156,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Religion ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/master/religions/{id} [delete]
+// @Router /master/religions/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

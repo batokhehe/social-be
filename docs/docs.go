@@ -15,7 +15,231 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/login": {
+        "/admin/users": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new user account by superadmin",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create user",
+                "parameters": [
+                    {
+                        "description": "Create user request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List active events with valid end date",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get active events for volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get event detail if active and still valid",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get active event detail for volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{id}/apply": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Register volunteer attendance for an event",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Apply to event",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{id}/checkin": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Check in volunteer attendance with optional photo",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Check in to event",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Check-in photo",
+                        "name": "photo",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{id}/checkout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Check out volunteer attendance with optional photo",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Check out from event",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Checkout photo",
+                        "name": "photo",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/login": {
             "post": {
                 "description": "Login with email and password",
                 "consumes": [
@@ -50,7 +274,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/attribute-volunteers": {
+        "/master/attribute-volunteers": {
             "get": {
                 "security": [
                     {
@@ -128,7 +352,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/attribute-volunteers/{id}": {
+        "/master/attribute-volunteers/{id}": {
             "get": {
                 "security": [
                     {
@@ -241,7 +465,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/category-activities": {
+        "/master/category-activities": {
             "get": {
                 "security": [
                     {
@@ -319,7 +543,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/category-activities/{id}": {
+        "/master/category-activities/{id}": {
             "get": {
                 "security": [
                     {
@@ -432,7 +656,806 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/level-areas": {
+        "/master/donation-categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of master donation category",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donation-category"
+                ],
+                "summary": "Get all master donation category",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new master donation category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donation-category"
+                ],
+                "summary": "Create master donation category",
+                "parameters": [
+                    {
+                        "description": "Create master donation category",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterdonationcategory.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/donation-categories/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail master donation category",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donation-category"
+                ],
+                "summary": "Get master donation category by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donation Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing master donation category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donation-category"
+                ],
+                "summary": "Update master donation category",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donation Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update master donation category",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterdonationcategory.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete master donation category",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donation-category"
+                ],
+                "summary": "Delete master donation category",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donation Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/donatur-groups": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of master donatur group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur-group"
+                ],
+                "summary": "Get all master donatur group",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new master donatur group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur-group"
+                ],
+                "summary": "Create master donatur group",
+                "parameters": [
+                    {
+                        "description": "Create master donatur group",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterdonaturgroup.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/donatur-groups/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail master donatur group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur-group"
+                ],
+                "summary": "Get master donatur group by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donatur Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing master donatur group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur-group"
+                ],
+                "summary": "Update master donatur group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donatur Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update master donatur group",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterdonaturgroup.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete master donatur group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur-group"
+                ],
+                "summary": "Delete master donatur group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donatur Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/donaturs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of master donatur",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur"
+                ],
+                "summary": "Get all master donatur",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new master donatur",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur"
+                ],
+                "summary": "Create master donatur",
+                "parameters": [
+                    {
+                        "description": "Create master donatur",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterdonatur.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/donaturs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail master donatur",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur"
+                ],
+                "summary": "Get master donatur by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donatur ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing master donatur",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur"
+                ],
+                "summary": "Update master donatur",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donatur ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update master donatur",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masterdonatur.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete master donatur",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "master-donatur"
+                ],
+                "summary": "Delete master donatur",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Master Donatur ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of events for admin",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get all events",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new event by admin",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Create event",
+                "parameters": [
+                    {
+                        "description": "Create event",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/event.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/events/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get event details for admin",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get event by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing event by admin",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Update event",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update event",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/event.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete event by admin",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Delete event",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/events/{id}/attachments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get attachments for a specific event",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get event attachments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Event ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload attachment file for a specific event",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Add attachment to event",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Attachment file",
+                        "name": "attachment",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Attachment description",
+                        "name": "description",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/level-areas": {
             "get": {
                 "security": [
                     {
@@ -496,7 +1519,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/level-areas/{id}": {
+        "/master/level-areas/{id}": {
             "get": {
                 "security": [
                     {
@@ -609,7 +1632,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/level-volunteers": {
+        "/master/level-volunteers": {
             "get": {
                 "security": [
                     {
@@ -687,7 +1710,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/level-volunteers/{id}": {
+        "/master/level-volunteers/{id}": {
             "get": {
                 "security": [
                     {
@@ -800,7 +1823,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/master-activities": {
+        "/master/master-activities": {
             "get": {
                 "security": [
                     {
@@ -878,7 +1901,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/master-activities/{id}": {
+        "/master/master-activities/{id}": {
             "get": {
                 "security": [
                     {
@@ -991,7 +2014,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/master-areas": {
+        "/master/master-areas": {
             "get": {
                 "security": [
                     {
@@ -1055,7 +2078,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/master-areas/{id}": {
+        "/master/master-areas/{id}": {
             "get": {
                 "security": [
                     {
@@ -1168,7 +2191,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/religions": {
+        "/master/religions": {
             "get": {
                 "security": [
                     {
@@ -1246,7 +2269,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/master/religions/{id}": {
+        "/master/religions/{id}": {
             "get": {
                 "security": [
                     {
@@ -1359,7 +2382,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/register": {
+        "/register": {
             "post": {
                 "description": "Register new user",
                 "consumes": [
@@ -1394,7 +2417,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/users": {
+        "/users": {
             "get": {
                 "security": [
                     {
@@ -1420,7 +2443,71 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/users/{id}": {
+        "/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get authenticated user profile",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get current user profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/users/upload-photo": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload profile photo to NAS and return URL",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Upload profile photo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Profile photo",
+                        "name": "profile_photo",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}": {
             "get": {
                 "security": [
                     {
@@ -1455,7 +2542,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/volunteers": {
+        "/volunteers": {
             "get": {
                 "security": [
                     {
@@ -1533,7 +2620,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/volunteers/{id}": {
+        "/volunteers/{id}": {
             "get": {
                 "security": [
                     {
@@ -1726,6 +2813,9 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "minLength": 6
+                },
+                "profile_photo": {
+                    "type": "string"
                 }
             }
         },
@@ -1765,6 +2855,84 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "event.CreateRequest": {
+            "type": "object",
+            "required": [
+                "activity_id",
+                "category_activity_id",
+                "end_at",
+                "name",
+                "pic_user_id",
+                "start_at"
+            ],
+            "properties": {
+                "activity_id": {
+                    "type": "integer"
+                },
+                "category_activity_id": {
+                    "type": "integer"
+                },
+                "end_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "pic_user_id": {
+                    "type": "integer"
+                },
+                "start_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "event.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "activity_id",
+                "category_activity_id",
+                "end_at",
+                "name",
+                "pic_user_id",
+                "start_at"
+            ],
+            "properties": {
+                "activity_id": {
+                    "type": "integer"
+                },
+                "category_activity_id": {
+                    "type": "integer"
+                },
+                "end_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "pic_user_id": {
+                    "type": "integer"
+                },
+                "start_at": {
+                    "type": "string"
                 },
                 "status": {
                     "type": "string",
@@ -1891,7 +3059,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "category_activity_id",
-                "name"
+                "name",
+                "target"
             ],
             "properties": {
                 "category_activity_id": {
@@ -1912,6 +3081,10 @@ const docTemplate = `{
                         "active",
                         "inactive"
                     ]
+                },
+                "target": {
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },
@@ -1919,7 +3092,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "category_activity_id",
-                "name"
+                "name",
+                "target"
             ],
             "properties": {
                 "category_activity_id": {
@@ -1940,6 +3114,10 @@ const docTemplate = `{
                         "active",
                         "inactive"
                     ]
+                },
+                "target": {
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },
@@ -1971,6 +3149,13 @@ const docTemplate = `{
                 "parent_id": {
                     "type": "integer",
                     "minimum": 1
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
                 }
             }
         },
@@ -2002,6 +3187,199 @@ const docTemplate = `{
                 "parent_id": {
                     "type": "integer",
                     "minimum": 1
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "masterdonationcategory.CreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "masterdonationcategory.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "masterdonatur.CreateRequest": {
+            "type": "object",
+            "required": [
+                "area",
+                "id_donatur",
+                "telepon"
+            ],
+            "properties": {
+                "area": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "id_donatur": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "id_group_donatur": {
+                    "type": "integer"
+                },
+                "id_tzu_chi_app": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "id_vis_relawan": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                },
+                "telepon": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "masterdonatur.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "area",
+                "id_donatur",
+                "telepon"
+            ],
+            "properties": {
+                "area": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "id_donatur": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "id_group_donatur": {
+                    "type": "integer"
+                },
+                "id_tzu_chi_app": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "id_vis_relawan": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                },
+                "telepon": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "masterdonaturgroup.CreateRequest": {
+            "type": "object",
+            "required": [
+                "id_group_donatur",
+                "name",
+                "pic_name",
+                "pic_phone"
+            ],
+            "properties": {
+                "id_group_donatur": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "pic_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "pic_phone": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
+                }
+            }
+        },
+        "masterdonaturgroup.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "id_group_donatur",
+                "name",
+                "pic_name",
+                "pic_phone"
+            ],
+            "properties": {
+                "id_group_donatur": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "pic_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "pic_phone": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
                 }
             }
         },
@@ -2048,6 +3426,32 @@ const docTemplate = `{
                         "active",
                         "inactive"
                     ]
+                }
+            }
+        },
+        "user.CreateRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6
+                },
+                "profile_photo": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "integer"
                 }
             }
         },
@@ -2414,7 +3818,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "",
-	BasePath:         "/",
+	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Social BE API",
 	Description:      "API documentation",

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RoleMiddleware(requiredRole int) gin.HandlerFunc {
+func RoleMiddleware(allowedRoles ...int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		roleVal, exists := c.Get("role")
 		if !exists {
@@ -22,11 +22,13 @@ func RoleMiddleware(requiredRole int) gin.HandlerFunc {
 			return
 		}
 
-		if role != requiredRole {
-			response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "forbidden"))
-			return
+		for _, allowed := range allowedRoles {
+			if role == allowed {
+				c.Next()
+				return
+			}
 		}
 
-		c.Next()
+		response.AbortError(c, apperror.New(http.StatusForbidden, apperror.CodeForbidden, "forbidden"))
 	}
 }

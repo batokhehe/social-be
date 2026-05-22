@@ -3,6 +3,7 @@ package levelarea
 import (
 	"context"
 	"social-be/internal/pkg/pagination"
+	"social-be/internal/pkg/query"
 )
 
 type Service struct {
@@ -17,8 +18,8 @@ func (s *Service) GetAll(ctx context.Context) ([]LevelArea, error) {
 	return s.Repo.GetAll(ctx)
 }
 
-func (s *Service) GetPaginated(ctx context.Context, page pagination.Query) ([]LevelArea, pagination.Meta, error) {
-	items, total, err := s.Repo.GetPaginated(ctx, page)
+func (s *Service) GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]LevelArea, pagination.Meta, error) {
+	items, total, err := s.Repo.GetPaginated(ctx, page, filters)
 	if err != nil {
 		return nil, pagination.Meta{}, err
 	}

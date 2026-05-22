@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api/v1
 definitions:
   attributevolunteer.CreateRequest:
     properties:
@@ -51,6 +51,8 @@ definitions:
       password:
         minLength: 6
         type: string
+      profile_photo:
+        type: string
     required:
     - email
     - name
@@ -87,6 +89,62 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  event.CreateRequest:
+    properties:
+      activity_id:
+        type: integer
+      category_activity_id:
+        type: integer
+      end_at:
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      pic_user_id:
+        type: integer
+      start_at:
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - activity_id
+    - category_activity_id
+    - end_at
+    - name
+    - pic_user_id
+    - start_at
+    type: object
+  event.UpdateRequest:
+    properties:
+      activity_id:
+        type: integer
+      category_activity_id:
+        type: integer
+      end_at:
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      pic_user_id:
+        type: integer
+      start_at:
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - activity_id
+    - category_activity_id
+    - end_at
+    - name
+    - pic_user_id
+    - start_at
     type: object
   levelarea.CreateRequest:
     properties:
@@ -184,9 +242,13 @@ definitions:
         - active
         - inactive
         type: string
+      target:
+        minimum: 0
+        type: integer
     required:
     - category_activity_id
     - name
+    - target
     type: object
   masteractivity.UpdateRequest:
     properties:
@@ -204,9 +266,13 @@ definitions:
         - active
         - inactive
         type: string
+      target:
+        minimum: 0
+        type: integer
     required:
     - category_activity_id
     - name
+    - target
     type: object
   masterarea.CreateRequest:
     properties:
@@ -225,6 +291,11 @@ definitions:
       parent_id:
         minimum: 1
         type: integer
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
     required:
     - description
     - level_area_id
@@ -248,11 +319,150 @@ definitions:
       parent_id:
         minimum: 1
         type: integer
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
     required:
     - description
     - level_area_id
     - location
     - name
+    type: object
+  masterdonationcategory.CreateRequest:
+    properties:
+      name:
+        maxLength: 100
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
+  masterdonationcategory.UpdateRequest:
+    properties:
+      name:
+        maxLength: 100
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - name
+    type: object
+  masterdonatur.CreateRequest:
+    properties:
+      area:
+        maxLength: 100
+        type: string
+      id_donatur:
+        maxLength: 50
+        type: string
+      id_group_donatur:
+        type: integer
+      id_tzu_chi_app:
+        maxLength: 50
+        type: string
+      id_vis_relawan:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+      telepon:
+        maxLength: 20
+        type: string
+    required:
+    - area
+    - id_donatur
+    - telepon
+    type: object
+  masterdonatur.UpdateRequest:
+    properties:
+      area:
+        maxLength: 100
+        type: string
+      id_donatur:
+        maxLength: 50
+        type: string
+      id_group_donatur:
+        type: integer
+      id_tzu_chi_app:
+        maxLength: 50
+        type: string
+      id_vis_relawan:
+        maxLength: 50
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+      telepon:
+        maxLength: 20
+        type: string
+    required:
+    - area
+    - id_donatur
+    - telepon
+    type: object
+  masterdonaturgroup.CreateRequest:
+    properties:
+      id_group_donatur:
+        maxLength: 50
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      pic_name:
+        maxLength: 100
+        type: string
+      pic_phone:
+        maxLength: 20
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - id_group_donatur
+    - name
+    - pic_name
+    - pic_phone
+    type: object
+  masterdonaturgroup.UpdateRequest:
+    properties:
+      id_group_donatur:
+        maxLength: 50
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      pic_name:
+        maxLength: 100
+        type: string
+      pic_phone:
+        maxLength: 20
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        type: string
+    required:
+    - id_group_donatur
+    - name
+    - pic_name
+    - pic_phone
     type: object
   religion.CreateRequest:
     properties:
@@ -285,6 +495,24 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  user.CreateRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      profile_photo:
+        type: string
+      role:
+        type: integer
+    required:
+    - email
+    - name
+    - password
     type: object
   volunteer.CreateRequest:
     properties:
@@ -564,7 +792,147 @@ info:
   title: Social BE API
   version: "1.0"
 paths:
-  /api/login:
+  /admin/users:
+    post:
+      consumes:
+      - application/json
+      description: Create new user account by superadmin
+      parameters:
+      - description: Create user request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create user
+      tags:
+      - users
+  /events:
+    get:
+      description: List active events with valid end date
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get active events for volunteer
+      tags:
+      - event
+  /events/{id}:
+    get:
+      description: Get event detail if active and still valid
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get active event detail for volunteer
+      tags:
+      - event
+  /events/{id}/apply:
+    post:
+      description: Register volunteer attendance for an event
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Apply to event
+      tags:
+      - event
+  /events/{id}/checkin:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Check in volunteer attendance with optional photo
+      parameters:
+      - description: Check-in photo
+        in: formData
+        name: photo
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check in to event
+      tags:
+      - event
+  /events/{id}/checkout:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Check out volunteer attendance with optional photo
+      parameters:
+      - description: Checkout photo
+        in: formData
+        name: photo
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check out from event
+      tags:
+      - event
+  /login:
     post:
       consumes:
       - application/json
@@ -587,7 +955,7 @@ paths:
       summary: Login user
       tags:
       - auth
-  /api/master/attribute-volunteers:
+  /master/attribute-volunteers:
     get:
       description: Get paginated list of attribute volunteer
       parameters:
@@ -636,7 +1004,7 @@ paths:
       summary: Create attribute volunteer
       tags:
       - attribute-volunteer
-  /api/master/attribute-volunteers/{id}:
+  /master/attribute-volunteers/{id}:
     delete:
       description: Soft delete attribute volunteer
       parameters:
@@ -708,7 +1076,7 @@ paths:
       summary: Update attribute volunteer
       tags:
       - attribute-volunteer
-  /api/master/category-activities:
+  /master/category-activities:
     get:
       description: Get paginated list of category activity
       parameters:
@@ -757,7 +1125,7 @@ paths:
       summary: Create category activity
       tags:
       - category-activity
-  /api/master/category-activities/{id}:
+  /master/category-activities/{id}:
     delete:
       description: Soft delete category activity
       parameters:
@@ -829,7 +1197,513 @@ paths:
       summary: Update category activity
       tags:
       - category-activity
-  /api/master/level-areas:
+  /master/donation-categories:
+    get:
+      description: Get list of master donation category
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all master donation category
+      tags:
+      - master-donation-category
+    post:
+      consumes:
+      - application/json
+      description: Create new master donation category
+      parameters:
+      - description: Create master donation category
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterdonationcategory.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create master donation category
+      tags:
+      - master-donation-category
+  /master/donation-categories/{id}:
+    delete:
+      description: Soft delete master donation category
+      parameters:
+      - description: Master Donation Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete master donation category
+      tags:
+      - master-donation-category
+    get:
+      description: Get detail master donation category
+      parameters:
+      - description: Master Donation Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get master donation category by ID
+      tags:
+      - master-donation-category
+    put:
+      consumes:
+      - application/json
+      description: Update existing master donation category
+      parameters:
+      - description: Master Donation Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update master donation category
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterdonationcategory.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update master donation category
+      tags:
+      - master-donation-category
+  /master/donatur-groups:
+    get:
+      description: Get list of master donatur group
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all master donatur group
+      tags:
+      - master-donatur-group
+    post:
+      consumes:
+      - application/json
+      description: Create new master donatur group
+      parameters:
+      - description: Create master donatur group
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterdonaturgroup.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create master donatur group
+      tags:
+      - master-donatur-group
+  /master/donatur-groups/{id}:
+    delete:
+      description: Soft delete master donatur group
+      parameters:
+      - description: Master Donatur Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete master donatur group
+      tags:
+      - master-donatur-group
+    get:
+      description: Get detail master donatur group
+      parameters:
+      - description: Master Donatur Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get master donatur group by ID
+      tags:
+      - master-donatur-group
+    put:
+      consumes:
+      - application/json
+      description: Update existing master donatur group
+      parameters:
+      - description: Master Donatur Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update master donatur group
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterdonaturgroup.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update master donatur group
+      tags:
+      - master-donatur-group
+  /master/donaturs:
+    get:
+      description: Get list of master donatur
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all master donatur
+      tags:
+      - master-donatur
+    post:
+      consumes:
+      - application/json
+      description: Create new master donatur
+      parameters:
+      - description: Create master donatur
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterdonatur.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create master donatur
+      tags:
+      - master-donatur
+  /master/donaturs/{id}:
+    delete:
+      description: Soft delete master donatur
+      parameters:
+      - description: Master Donatur ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete master donatur
+      tags:
+      - master-donatur
+    get:
+      description: Get detail master donatur
+      parameters:
+      - description: Master Donatur ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get master donatur by ID
+      tags:
+      - master-donatur
+    put:
+      consumes:
+      - application/json
+      description: Update existing master donatur
+      parameters:
+      - description: Master Donatur ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update master donatur
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterdonatur.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update master donatur
+      tags:
+      - master-donatur
+  /master/events:
+    get:
+      description: Get paginated list of events for admin
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all events
+      tags:
+      - event
+    post:
+      consumes:
+      - application/json
+      description: Create new event by admin
+      parameters:
+      - description: Create event
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/event.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create event
+      tags:
+      - event
+  /master/events/{id}:
+    delete:
+      description: Soft delete event by admin
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete event
+      tags:
+      - event
+    get:
+      description: Get event details for admin
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get event by ID
+      tags:
+      - event
+    put:
+      consumes:
+      - application/json
+      description: Update existing event by admin
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update event
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/event.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update event
+      tags:
+      - event
+  /master/events/{id}/attachments:
+    get:
+      description: Get attachments for a specific event
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get event attachments
+      tags:
+      - event
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload attachment file for a specific event
+      parameters:
+      - description: Attachment file
+        in: formData
+        name: attachment
+        required: true
+        type: file
+      - description: Attachment description
+        in: formData
+        name: description
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add attachment to event
+      tags:
+      - event
+  /master/level-areas:
     get:
       description: Get list of level area
       produces:
@@ -869,7 +1743,7 @@ paths:
       summary: Create level area
       tags:
       - level-area
-  /api/master/level-areas/{id}:
+  /master/level-areas/{id}:
     delete:
       description: Soft delete level area
       parameters:
@@ -941,7 +1815,7 @@ paths:
       summary: Update level area
       tags:
       - level-area
-  /api/master/level-volunteers:
+  /master/level-volunteers:
     get:
       description: Get paginated list of level volunteer
       parameters:
@@ -990,7 +1864,7 @@ paths:
       summary: Create level volunteer
       tags:
       - level-volunteer
-  /api/master/level-volunteers/{id}:
+  /master/level-volunteers/{id}:
     delete:
       description: Soft delete level volunteer
       parameters:
@@ -1062,7 +1936,7 @@ paths:
       summary: Update level volunteer
       tags:
       - level-volunteer
-  /api/master/master-activities:
+  /master/master-activities:
     get:
       description: Get paginated list of master activity
       parameters:
@@ -1111,7 +1985,7 @@ paths:
       summary: Create master activity
       tags:
       - master-activity
-  /api/master/master-activities/{id}:
+  /master/master-activities/{id}:
     delete:
       description: Soft delete master activity
       parameters:
@@ -1183,7 +2057,7 @@ paths:
       summary: Update master activity
       tags:
       - master-activity
-  /api/master/master-areas:
+  /master/master-areas:
     get:
       description: Get list of master area
       produces:
@@ -1223,7 +2097,7 @@ paths:
       summary: Create master area
       tags:
       - master-area
-  /api/master/master-areas/{id}:
+  /master/master-areas/{id}:
     delete:
       description: Soft delete master area
       parameters:
@@ -1295,7 +2169,7 @@ paths:
       summary: Update master area
       tags:
       - master-area
-  /api/master/religions:
+  /master/religions:
     get:
       description: Get paginated list of religion
       parameters:
@@ -1344,7 +2218,7 @@ paths:
       summary: Create religion
       tags:
       - religion
-  /api/master/religions/{id}:
+  /master/religions/{id}:
     delete:
       description: Soft delete religion
       parameters:
@@ -1416,7 +2290,7 @@ paths:
       summary: Update religion
       tags:
       - religion
-  /api/register:
+  /register:
     post:
       consumes:
       - application/json
@@ -1439,7 +2313,7 @@ paths:
       summary: Register user
       tags:
       - auth
-  /api/users:
+  /users:
     get:
       description: Get list of users
       produces:
@@ -1455,7 +2329,7 @@ paths:
       summary: Get all users
       tags:
       - users
-  /api/users/{id}:
+  /users/{id}:
     get:
       description: Get detail user by ID
       parameters:
@@ -1477,7 +2351,47 @@ paths:
       summary: Get user by ID
       tags:
       - users
-  /api/volunteers:
+  /users/me:
+    get:
+      description: Get authenticated user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+  /users/upload-photo:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload profile photo to NAS and return URL
+      parameters:
+      - description: Profile photo
+        in: formData
+        name: profile_photo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload profile photo
+      tags:
+      - users
+  /volunteers:
     get:
       description: Get paginated list of volunteer
       parameters:
@@ -1526,7 +2440,7 @@ paths:
       summary: Create volunteer
       tags:
       - volunteer
-  /api/volunteers/{id}:
+  /volunteers/{id}:
     delete:
       description: Soft delete volunteer
       parameters:

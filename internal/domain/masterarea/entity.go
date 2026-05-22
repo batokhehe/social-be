@@ -5,6 +5,7 @@ type MasterArea struct {
 	Name        string `json:"name"`
 	LevelAreaID string `json:"level_area_id"`
 	Description string `json:"description"`
+	Status      string `json:"status"`
 	ParentID    *int   `json:"parent_id,omitempty"`
 	Location    string `json:"location"`
 	CreatedBy   *int   `json:"created_by,omitempty"`
