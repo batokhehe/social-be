@@ -90,6 +90,14 @@ definitions:
     required:
     - name
     type: object
+  email.SendRequest:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+    required:
+    - email
+    type: object
   event.CreateRequest:
     properties:
       activity_id:
@@ -817,6 +825,30 @@ paths:
       summary: Create user
       tags:
       - users
+  /email/test:
+    post:
+      consumes:
+      - application/json
+      description: Queues an email delivery request to SMTP and returns immediately.
+        No real-time delivery confirmation is returned.
+      parameters:
+      - description: Email request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/email.SendRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Send async email check
+      tags:
+      - email
   /events:
     get:
       description: List active events with valid end date
@@ -1740,7 +1772,6 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Create level area
       tags:
       - level-area
   /master/level-areas/{id}:
@@ -2290,6 +2321,127 @@ paths:
       summary: Update religion
       tags:
       - religion
+  /master/volunteers:
+    get:
+      description: Get paginated list of volunteer
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all volunteer
+      tags:
+      - volunteer
+    post:
+      consumes:
+      - application/json
+      description: Create new volunteer
+      parameters:
+      - description: Create volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/volunteer.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create volunteer
+      tags:
+      - volunteer
+  /master/volunteers/{id}:
+    delete:
+      description: Soft delete volunteer
+      parameters:
+      - description: Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete volunteer
+      tags:
+      - volunteer
+    get:
+      description: Get detail volunteer
+      parameters:
+      - description: Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get volunteer by ID
+      tags:
+      - volunteer
+    put:
+      consumes:
+      - application/json
+      description: Update existing volunteer
+      parameters:
+      - description: Volunteer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update volunteer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/volunteer.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update volunteer
+      tags:
+      - volunteer
   /register:
     post:
       consumes:
@@ -2391,127 +2543,6 @@ paths:
       summary: Upload profile photo
       tags:
       - users
-  /volunteers:
-    get:
-      description: Get paginated list of volunteer
-      parameters:
-      - description: Page number
-        in: query
-        name: page
-        type: integer
-      - description: Page size
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all volunteer
-      tags:
-      - volunteer
-    post:
-      consumes:
-      - application/json
-      description: Create new volunteer
-      parameters:
-      - description: Create volunteer
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/volunteer.CreateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create volunteer
-      tags:
-      - volunteer
-  /volunteers/{id}:
-    delete:
-      description: Soft delete volunteer
-      parameters:
-      - description: Volunteer ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete volunteer
-      tags:
-      - volunteer
-    get:
-      description: Get detail volunteer
-      parameters:
-      - description: Volunteer ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get volunteer by ID
-      tags:
-      - volunteer
-    put:
-      consumes:
-      - application/json
-      description: Update existing volunteer
-      parameters:
-      - description: Volunteer ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Update volunteer
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/volunteer.UpdateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update volunteer
-      tags:
-      - volunteer
 securityDefinitions:
   BearerAuth:
     in: header

@@ -16,6 +16,7 @@ import (
 	"social-be/internal/domain/attributevolunteer"
 	"social-be/internal/domain/auth"
 	"social-be/internal/domain/categoryactivity"
+	"social-be/internal/domain/email"
 	"social-be/internal/domain/event"
 	"social-be/internal/domain/levelarea"
 	"social-be/internal/domain/levelvolunteer"
@@ -98,6 +99,7 @@ func main() {
 	eventRepo := event.NewGormRepository(db, logger.Log)
 	speakRepo := speak.NewGormRepository(db, logger.Log)
 
+	emailService := email.NewService()
 	userService := &user.Service{Repo: userRepo}
 	levelAreaService := &levelarea.Service{Repo: levelAreaRepo}
 	masterAreaService := &masterarea.Service{Repo: masterAreaRepo}
@@ -115,6 +117,7 @@ func main() {
 	authService := auth.NewService(userService, volunteerService)
 	uploadService := upload.NewService()
 
+	emailHandler := &email.Handler{Service: emailService}
 	userHandler := &user.Handler{Service: userService, UploadService: uploadService}
 	authHandler := &auth.Handler{Service: authService}
 	levelAreaHandler := &levelarea.Handler{Service: levelAreaService}
@@ -243,6 +246,7 @@ func main() {
 	v1.POST("/register", authHandler.Register)
 	v1.POST("/login", authHandler.Login)
 	v1.POST("/refresh", authHandler.Refresh)
+	v1.POST("/email/test", emailHandler.Send)
 
 	protected := v1.Group("/")
 	protected.Use(middleware.AuthMiddleware())
