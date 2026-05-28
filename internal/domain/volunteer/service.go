@@ -28,6 +28,14 @@ func (s *Service) GetByUserID(ctx context.Context, userID int) (*Volunteer, erro
 	return s.Repo.GetByUserID(ctx, userID)
 }
 
+func (s *Service) VerifyResetPassword(ctx context.Context, token string) (*ResetPasswordValidation, error) {
+	return s.Repo.ValidateResetToken(ctx, token)
+}
+
+func (s *Service) ResetPassword(ctx context.Context, token, password string) error {
+	return s.Repo.ResetPassword(ctx, token, password)
+}
+
 func (s *Service) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Volunteer, error) {
 	return s.Repo.Update(ctx, id, req, actorID)
 }

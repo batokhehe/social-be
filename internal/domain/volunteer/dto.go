@@ -1,8 +1,25 @@
 package volunteer
 
+import "time"
+
 type FreeTimeRequest struct {
 	DayOfWeek string `json:"day_of_week" validate:"required,oneof=monday tuesday wednesday thursday friday saturday sunday"`
 	Period    string `json:"period" validate:"required,oneof=morning afternoon evening"`
+}
+
+type ResetPasswordVerifyRequest struct {
+	Token string `json:"token" validate:"required,max=128"`
+}
+
+type ResetPasswordRequest struct {
+	Token    string `json:"token" validate:"required,max=128"`
+	Password string `json:"password" validate:"required,min=8,max=128"`
+}
+
+type ResetPasswordValidation struct {
+	Email     string    `json:"email"`
+	Valid     bool      `json:"valid"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type CreateRequest struct {

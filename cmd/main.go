@@ -16,6 +16,7 @@ import (
 	"social-be/internal/domain/attributevolunteer"
 	"social-be/internal/domain/auth"
 	"social-be/internal/domain/categoryactivity"
+	"social-be/internal/domain/donation"
 	"social-be/internal/domain/email"
 	"social-be/internal/domain/event"
 	"social-be/internal/domain/levelarea"
@@ -98,6 +99,9 @@ func main() {
 	volunteerRepo := volunteer.NewGormRepository(db, logger.Log)
 	eventRepo := event.NewGormRepository(db, logger.Log)
 	speakRepo := speak.NewGormRepository(db, logger.Log)
+	donationRepo := donation.NewGormRepository(db)
+	donationService := donation.NewService(donationRepo)
+	donationHandler := donation.NewHandler(donationService)
 
 	emailService := email.NewService()
 	userService := &user.Service{Repo: userRepo}
@@ -114,6 +118,7 @@ func main() {
 	volunteerService := &volunteer.Service{Repo: volunteerRepo}
 	eventService := &event.Service{Repo: eventRepo, VolunteerService: volunteerService}
 	speakService := &speak.Service{Repo: speakRepo}
+
 	authService := auth.NewService(userService, volunteerService)
 	uploadService := upload.NewService()
 
@@ -247,6 +252,8 @@ func main() {
 	v1.POST("/login", authHandler.Login)
 	v1.POST("/refresh", authHandler.Refresh)
 	v1.POST("/email/test", emailHandler.Send)
+	v1.POST("/volunteers/reset-password/verify", volunteerHandler.VerifyResetPassword)
+	v1.POST("/volunteers/reset-password", volunteerHandler.ResetPassword)
 
 	protected := v1.Group("/")
 	protected.Use(middleware.AuthMiddleware())
@@ -302,6 +309,11 @@ func main() {
 	master.POST("/donaturs", masterDonaturHandler.Create)
 	master.PUT("/donaturs/:id", masterDonaturHandler.Update)
 	master.DELETE("/donaturs/:id", masterDonaturHandler.Delete)
+	master.GET("/donations", donationHandler.GetAll)
+	master.GET("/donations/:id", donationHandler.GetByID)
+	master.POST("/donations", donationHandler.Create)
+	master.PUT("/donations/:id", donationHandler.Update)
+	master.DELETE("/donations/:id", donationHandler.Delete)
 	master.GET("/religions", religionHandler.GetAll)
 	master.GET("/religions/:id", religionHandler.GetByID)
 	master.POST("/religions", religionHandler.Create)
@@ -332,7 +344,7 @@ func main() {
 	masterEvents.GET(":id/attachments", eventHandler.GetAttachments)
 
 	volunteerEvents := protected.Group("/events")
-	volunteerEvents.Use(middleware.RoleMiddleware(2))
+	volunteerEvents.Use(middleware.RoleMiddleware(0, 1, 2))
 	volunteerEvents.GET("", eventHandler.GetVolunteerEvents)
 	volunteerEvents.GET(":id", eventHandler.GetVolunteerEventByID)
 	volunteerEvents.POST(":id/apply", eventHandler.ApplyToEvent)

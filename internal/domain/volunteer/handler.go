@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"social-be/internal/pkg/apperror"
+	"social-be/internal/pkg/logger"
 	"social-be/internal/pkg/pagination"
 	"social-be/internal/pkg/response"
 	"social-be/internal/pkg/validation"
@@ -87,6 +88,41 @@ func (h *Handler) GetAll(c *gin.Context) {
 		return
 	}
 	response.SuccessWithPagination(c, items, meta)
+}
+
+func (h *Handler) VerifyResetPassword(c *gin.Context) {
+	var req ResetPasswordVerifyRequest
+	if ok := bindAndValidate(c, &req); !ok {
+		return
+	}
+
+	result, err := h.Service.VerifyResetPassword(c.Request.Context(), req.Token)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).WithField("token", req.Token).Warn("invalid volunteer reset token")
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid or expired reset token"))
+		return
+	}
+
+	response.Success(c, gin.H{
+		"email":      result.Email,
+		"valid":      result.Valid,
+		"expires_at": result.ExpiresAt,
+	})
+}
+
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if ok := bindAndValidate(c, &req); !ok {
+		return
+	}
+
+	if err := h.Service.ResetPassword(c.Request.Context(), req.Token, req.Password); err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).WithField("token", req.Token).Warn("failed to reset volunteer password")
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid or expired reset token"))
+		return
+	}
+
+	response.Success(c, gin.H{"message": "password updated"})
 }
 
 // GetByID godoc

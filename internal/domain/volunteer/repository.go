@@ -24,6 +24,8 @@ type Repository interface {
 	GetByUserID(ctx context.Context, userID int) (*Volunteer, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Volunteer, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
+	ValidateResetToken(ctx context.Context, token string) (*ResetPasswordValidation, error)
+	ResetPassword(ctx context.Context, token, password string) error
 }
 
 type GormRepository struct {
@@ -190,6 +192,38 @@ func (r *GormRepository) GetByUserID(ctx context.Context, userID int) (*Voluntee
 		return nil, err
 	}
 	return &item, nil
+}
+
+func (r *GormRepository) ValidateResetToken(ctx context.Context, token string) (*ResetPasswordValidation, error) {
+	var row passwordResetTokenModel
+	if err := r.DB.WithContext(ctx).Where("token = ? AND used_at IS NULL AND expires_at > ?", token, time.Now()).Take(&row).Error; err != nil {
+		return nil, err
+	}
+
+	var user userModel
+	if err := r.DB.WithContext(ctx).Where("id = ?", row.UserID).Take(&user).Error; err != nil {
+		return nil, err
+	}
+
+	return &ResetPasswordValidation{Email: user.Email, Valid: true, ExpiresAt: row.ExpiresAt}, nil
+}
+
+func (r *GormRepository) ResetPassword(ctx context.Context, token, password string) error {
+	hash, err := security.HashPassword(password)
+	if err != nil {
+		return err
+	}
+
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var row passwordResetTokenModel
+		if err := tx.Where("token = ? AND used_at IS NULL AND expires_at > ?", token, time.Now()).Take(&row).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&userModel{}).Where("id = ?", row.UserID).Update("password_hash", hash).Error; err != nil {
+			return err
+		}
+		return tx.Model(&passwordResetTokenModel{}).Where("token = ?", token).Update("used_at", time.Now()).Error
+	})
 }
 
 func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Volunteer, error) {
