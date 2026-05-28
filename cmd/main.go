@@ -335,6 +335,7 @@ func main() {
 	master.POST("/speaks/:id/action", speakHandler.Action)
 
 	masterEvents := master.Group("/events")
+	masterEvents.Use(middleware.RoleMiddleware(0, 1, 2))
 	masterEvents.POST("", eventHandler.Create)
 	masterEvents.GET("", eventHandler.GetAll)
 	masterEvents.GET(":id", eventHandler.GetByID)
