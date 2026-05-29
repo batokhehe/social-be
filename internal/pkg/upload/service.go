@@ -1,14 +1,10 @@
 package upload
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,76 +30,45 @@ func (s *Service) UploadFile(ctx context.Context, file *multipart.FileHeader, mo
 	}
 	defer src.Close()
 
-	// Read file content
-	fileContent, err := io.ReadAll(src)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file content: %w", err)
-	}
-
 	// Generate unique filename
 	filename := generateUniqueFilename(file.Filename)
 
-	// Prepare multipart form data for NAS API
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
+	mountPath := os.Getenv("NAS_MOUNT_PATH")
+	if mountPath == "" {
+		mountPath = "/mnt/nas"
+	}
+	if err := ensureMountReady(mountPath); err != nil {
+		return "", err
+	}
 
-	// Add file field
-	fw, err := w.CreateFormFile("file", filename)
+	modulePath, err := safeModulePath(module)
 	if err != nil {
-		return "", fmt.Errorf("failed to create form file: %w", err)
-	}
-	if _, err := fw.Write(fileContent); err != nil {
-		return "", fmt.Errorf("failed to write file content: %w", err)
+		return "", err
 	}
 
-	// Add module parameter if needed by NAS API
-	if err := w.WriteField("module", module); err != nil {
-		return "", fmt.Errorf("failed to add module field: %w", err)
+	targetDir := filepath.Join(mountPath, modulePath)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create upload directory: %w", err)
 	}
 
-	// Close the writer
-	w.Close()
-
-	// Get NAS API URL from environment
-	nasAPIURL := os.Getenv("NAS_API_URL")
-	if nasAPIURL == "" {
-		nasAPIURL = "http://localhost:8081/api/store-image" // Default NAS API URL
-	}
-
-	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, "POST", nasAPIURL, &b)
+	targetPath := filepath.Join(targetDir, filename)
+	dst, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to create upload file: %w", err)
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	defer dst.Close()
 
-	// Send request
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to call NAS API: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("NAS API returned status %d", resp.StatusCode)
+	if _, err := io.Copy(dst, src); err != nil {
+		return "", fmt.Errorf("failed to copy uploaded file: %w", err)
 	}
 
-	// Parse response
-	var nasResponse struct {
-		URL string `json:"url"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&nasResponse); err != nil {
-		return "", fmt.Errorf("failed to parse NAS response: %w", err)
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	default:
 	}
 
-	if nasResponse.URL == "" {
-		return "", errors.New("NAS API did not return a valid URL")
-	}
-
-	// Return path in format {module}/{filename}
-	return fmt.Sprintf("%s/%s", module, filename), nil
+	return fmt.Sprintf("%s/%s", modulePath, filename), nil
 }
 
 func validateFile(file *multipart.FileHeader) error {
@@ -131,8 +96,57 @@ func validateFile(file *multipart.FileHeader) error {
 }
 
 func generateUniqueFilename(originalFilename string) string {
-	ext := filepath.Ext(originalFilename)
-	name := strings.TrimSuffix(originalFilename, ext)
+	baseName := filepath.Base(originalFilename)
+	ext := filepath.Ext(baseName)
+	name := strings.TrimSuffix(baseName, ext)
 	timestamp := time.Now().UnixNano()
 	return fmt.Sprintf("%s_%d%s", name, timestamp, ext)
+}
+
+func ensureMountReady(mountPath string) error {
+	info, err := os.Stat(mountPath)
+	if err != nil {
+		return fmt.Errorf("NAS mount path is not accessible: %w", err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("NAS mount path is not a directory: %s", mountPath)
+	}
+	if os.Getenv("NAS_SKIP_MOUNT_CHECK") == "true" {
+		return nil
+	}
+	if !isMountPoint(mountPath) {
+		return fmt.Errorf("NAS mount path is not mounted: %s", mountPath)
+	}
+	return nil
+}
+
+func isMountPoint(mountPath string) bool {
+	data, err := os.ReadFile("/proc/self/mountinfo")
+	if err != nil {
+		return false
+	}
+	cleanMountPath := filepath.Clean(mountPath)
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 5 && filepath.Clean(unescapeMountInfoPath(fields[4])) == cleanMountPath {
+			return true
+		}
+	}
+	return false
+}
+
+func unescapeMountInfoPath(value string) string {
+	value = strings.ReplaceAll(value, `\040`, " ")
+	value = strings.ReplaceAll(value, `\011`, "\t")
+	value = strings.ReplaceAll(value, `\012`, "\n")
+	value = strings.ReplaceAll(value, `\134`, `\`)
+	return value
+}
+
+func safeModulePath(module string) (string, error) {
+	cleaned := filepath.Clean(module)
+	if cleaned == "." || filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "..") {
+		return "", fmt.Errorf("invalid upload module: %s", module)
+	}
+	return cleaned, nil
 }
