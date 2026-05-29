@@ -263,7 +263,7 @@ func main() {
 	protected.POST("/users/upload-photo", userHandler.UploadProfilePhoto)
 
 	master := protected.Group("/master")
-	master.Use(middleware.RoleMiddleware(0, 1))
+	// master.Use(middleware.RoleMiddleware(0, 1))
 	master.GET("/volunteers", volunteerHandler.GetAll)
 	master.GET("/volunteers/:id", volunteerHandler.GetByID)
 	master.POST("/volunteers", volunteerHandler.Create)
@@ -335,7 +335,7 @@ func main() {
 	master.POST("/speaks/:id/action", speakHandler.Action)
 
 	masterEvents := master.Group("/events")
-	masterEvents.Use(middleware.RoleMiddleware(0, 1, 2))
+	// masterEvents.Use(middleware.RoleMiddleware(0, 1, 2))
 	masterEvents.POST("", eventHandler.Create)
 	masterEvents.GET("", eventHandler.GetAll)
 	masterEvents.GET(":id", eventHandler.GetByID)
@@ -345,7 +345,7 @@ func main() {
 	masterEvents.GET(":id/attachments", eventHandler.GetAttachments)
 
 	volunteerEvents := protected.Group("/events")
-	volunteerEvents.Use(middleware.RoleMiddleware(0, 1, 2))
+	// volunteerEvents.Use(middleware.RoleMiddleware(0, 1, 2))
 	volunteerEvents.GET("", eventHandler.GetVolunteerEvents)
 	volunteerEvents.GET(":id", eventHandler.GetVolunteerEventByID)
 	volunteerEvents.POST(":id/apply", eventHandler.ApplyToEvent)
@@ -353,7 +353,7 @@ func main() {
 	volunteerEvents.POST(":id/checkout", eventHandler.CheckOutEvent)
 
 	admin := protected.Group("/admin")
-	admin.Use(middleware.RoleMiddleware(0, 1))
+	// admin.Use(middleware.RoleMiddleware(0, 1))
 	admin.GET("/users", userHandler.GetUsers)
 	admin.POST("/users", middleware.RoleMiddleware(0), userHandler.CreateUser)
 
