@@ -11,8 +11,8 @@ NAS_MOUNT_OPTIONS="${NAS_MOUNT_OPTIONS:-rw,dir_mode=0777,file_mode=0777,vers=3.0
 
 # If credentials not provided, skip mount
 if [ -z "$NAS_SHARE_USER" ] || [ -z "$NAS_SHARE_PASSWORD" ]; then
-  echo "⚠️  NAS_SHARE_USER and/or NAS_SHARE_PASSWORD not provided, skipping NAS mount"
-  exit 0
+  echo "⚠️  NAS_SHARE_USER and/or NAS_SHARE_PASSWORD not provided, cannot mount NAS"
+  exit 1
 fi
 
 mkdir -p "$NAS_MOUNT_PATH"
@@ -34,6 +34,6 @@ if mount -t cifs "$NAS_SHARE_PATH" "$NAS_MOUNT_PATH" -o "$MOUNT_OPTS" 2>&1; then
 else
   echo "❌ Failed to mount NAS (I/O error or network issue)"
   echo "   Make sure NAS server is reachable and credentials are correct"
-  echo "   Continuing without NAS mount..."
-  exit 0
+  echo "   Stopping because NAS mount is required for uploads."
+  exit 1
 fi
