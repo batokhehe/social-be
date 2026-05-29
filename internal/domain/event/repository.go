@@ -16,6 +16,7 @@ type Repository interface {
 	Create(ctx context.Context, req CreateRequest, startAt, endAt time.Time, actorID int) (*Event, error)
 	GetPaginated(ctx context.Context, page pagination.Query) ([]Event, int64, error)
 	GetActiveEvents(ctx context.Context, now time.Time, page pagination.Query) ([]Event, int64, error)
+	GetAppliedEventsByVolunteer(ctx context.Context, volunteerID int, page pagination.Query) ([]Event, int64, error)
 	GetByID(ctx context.Context, id int) (*Event, error)
 	Update(ctx context.Context, id int, req UpdateRequest, startAt, endAt time.Time, actorID int) (*Event, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
@@ -197,6 +198,39 @@ func (r *GormRepository) GetActiveEvents(ctx context.Context, now time.Time, pag
 	for _, row := range rows {
 		item := toEntity(row)
 		_ = r.loadPicUser(ctx, &item)
+		items = append(items, item)
+	}
+	return items, total, nil
+}
+
+func (r *GormRepository) GetAppliedEventsByVolunteer(ctx context.Context, volunteerID int, page pagination.Query) ([]Event, int64, error) {
+	baseQuery := r.DB.WithContext(ctx).Model(&eventModel{}).
+		Joins("JOIN event_attendances ON event_attendances.event_id = events.id").
+		Where("events.deleted_at IS NULL").
+		Where("event_attendances.deleted_at IS NULL").
+		Where("event_attendances.volunteer_id = ?", volunteerID)
+
+	var total int64
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed count applied events: %w", err)
+	}
+
+	var rows []eventModel
+	if err := baseQuery.
+		Order("events.start_at DESC").
+		Limit(page.Limit).
+		Offset(page.Offset).
+		Find(&rows).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed get applied events: %w", err)
+	}
+
+	items := make([]Event, 0, len(rows))
+	for _, row := range rows {
+		item := toEntity(row)
+		_ = r.loadPicUser(ctx, &item)
+		if err := r.loadAttendanceByVolunteer(ctx, &item, volunteerID); err != nil {
+			return nil, 0, err
+		}
 		items = append(items, item)
 	}
 	return items, total, nil
@@ -408,6 +442,17 @@ func (r *GormRepository) loadAttendances(ctx context.Context, event *Event) erro
 		items = append(items, toAttendanceEntity(row))
 	}
 	event.Attendances = items
+	return nil
+}
+
+func (r *GormRepository) loadAttendanceByVolunteer(ctx context.Context, event *Event, volunteerID int) error {
+	var row eventAttendanceModel
+	if err := r.DB.WithContext(ctx).
+		Where("event_id = ? AND volunteer_id = ? AND deleted_at IS NULL", event.ID, volunteerID).
+		Take(&row).Error; err != nil {
+		return fmt.Errorf("failed get event attendance: %w", err)
+	}
+	event.Attendances = []EventAttendance{toAttendanceEntity(row)}
 	return nil
 }
 

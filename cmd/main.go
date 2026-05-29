@@ -347,6 +347,7 @@ func main() {
 	volunteerEvents := protected.Group("/events")
 	// volunteerEvents.Use(middleware.RoleMiddleware(0, 1, 2))
 	volunteerEvents.GET("", eventHandler.GetVolunteerEvents)
+	volunteerEvents.GET("/applied", eventHandler.GetAppliedVolunteerEvents)
 	volunteerEvents.GET(":id", eventHandler.GetVolunteerEventByID)
 	volunteerEvents.POST(":id/apply", eventHandler.ApplyToEvent)
 	volunteerEvents.POST(":id/checkin", eventHandler.CheckInEvent)

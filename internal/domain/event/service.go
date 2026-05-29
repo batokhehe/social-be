@@ -45,6 +45,18 @@ func (s *Service) GetActiveEvents(ctx context.Context, page pagination.Query) ([
 	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
 }
 
+func (s *Service) GetAppliedEvents(ctx context.Context, userID int, page pagination.Query) ([]Event, pagination.Meta, error) {
+	volunteerData, err := s.VolunteerService.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+	items, total, err := s.Repo.GetAppliedEventsByVolunteer(ctx, volunteerData.ID, page)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
+}
+
 func (s *Service) GetByID(ctx context.Context, id int) (*Event, error) {
 	return s.Repo.GetByID(ctx, id)
 }

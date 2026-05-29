@@ -266,6 +266,35 @@ func (h *Handler) GetVolunteerEvents(c *gin.Context) {
 	response.SuccessWithPagination(c, items, meta)
 }
 
+// GetAppliedVolunteerEvents godoc
+// @Summary Get applied events for volunteer
+// @Description List events that current volunteer has registered for
+// @Tags event
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /events/applied [get]
+func (h *Handler) GetAppliedVolunteerEvents(c *gin.Context) {
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+	items, meta, err := h.Service.GetAppliedEvents(c.Request.Context(), actor, page)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch applied volunteer events")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_912", "failed to fetch applied events"))
+		return
+	}
+	response.SuccessWithPagination(c, items, meta)
+}
+
 // GetVolunteerEventByID godoc
 // @Summary Get active event detail for volunteer
 // @Description Get event detail if active and still valid
