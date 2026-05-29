@@ -123,6 +123,46 @@
                 }
             }
         },
+        "/events/applied": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List events that current volunteer has registered for",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get applied events for volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/events/{id}": {
             "get": {
                 "security": [
@@ -845,6 +885,183 @@
                     {
                         "type": "integer",
                         "description": "Master Donation Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/donations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of donations",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get all donations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new donation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Create donation",
+                "parameters": [
+                    {
+                        "description": "Create donation",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/donation.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/donations/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail donation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get donation by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Donation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing donation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Update donation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Donation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update donation",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/donation.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete donation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Delete donation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Donation ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2889,6 +3106,86 @@
                         "active",
                         "inactive"
                     ]
+                }
+            }
+        },
+        "donation.CreateRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "area_id",
+                "currency",
+                "donation_category_id",
+                "donatur_group_id",
+                "donatur_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "currency": {
+                    "type": "string",
+                    "maxLength": 10
+                },
+                "donation_category_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "donatur_group_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "donatur_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "other_items": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "donation.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "area_id",
+                "currency",
+                "donation_category_id",
+                "donatur_group_id",
+                "donatur_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "currency": {
+                    "type": "string",
+                    "maxLength": 10
+                },
+                "donation_category_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "donatur_group_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "donatur_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "other_items": {
+                    "type": "string",
+                    "maxLength": 500
                 }
             }
         },

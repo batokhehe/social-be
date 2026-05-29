@@ -90,6 +90,66 @@ definitions:
     required:
     - name
     type: object
+  donation.CreateRequest:
+    properties:
+      amount:
+        type: number
+      area_id:
+        minimum: 1
+        type: integer
+      currency:
+        maxLength: 10
+        type: string
+      donation_category_id:
+        minimum: 1
+        type: integer
+      donatur_group_id:
+        minimum: 1
+        type: integer
+      donatur_id:
+        minimum: 1
+        type: integer
+      other_items:
+        maxLength: 500
+        type: string
+    required:
+    - amount
+    - area_id
+    - currency
+    - donation_category_id
+    - donatur_group_id
+    - donatur_id
+    type: object
+  donation.UpdateRequest:
+    properties:
+      amount:
+        type: number
+      area_id:
+        minimum: 1
+        type: integer
+      currency:
+        maxLength: 10
+        type: string
+      donation_category_id:
+        minimum: 1
+        type: integer
+      donatur_group_id:
+        minimum: 1
+        type: integer
+      donatur_id:
+        minimum: 1
+        type: integer
+      other_items:
+        maxLength: 500
+        type: string
+    required:
+    - amount
+    - area_id
+    - currency
+    - donation_category_id
+    - donatur_group_id
+    - donatur_id
+    type: object
   email.SendRequest:
     properties:
       email:
@@ -964,6 +1024,31 @@ paths:
       summary: Check out from event
       tags:
       - event
+  /events/applied:
+    get:
+      description: List events that current volunteer has registered for
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get applied events for volunteer
+      tags:
+      - event
   /login:
     post:
       consumes:
@@ -1341,6 +1426,118 @@ paths:
       summary: Update master donation category
       tags:
       - master-donation-category
+  /master/donations:
+    get:
+      description: Get list of donations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all donations
+      tags:
+      - donation
+    post:
+      consumes:
+      - application/json
+      description: Create new donation
+      parameters:
+      - description: Create donation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/donation.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create donation
+      tags:
+      - donation
+  /master/donations/{id}:
+    delete:
+      description: Delete donation
+      parameters:
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete donation
+      tags:
+      - donation
+    get:
+      description: Get detail donation
+      parameters:
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get donation by ID
+      tags:
+      - donation
+    put:
+      consumes:
+      - application/json
+      description: Update existing donation
+      parameters:
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update donation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/donation.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update donation
+      tags:
+      - donation
   /master/donatur-groups:
     get:
       description: Get list of master donatur group

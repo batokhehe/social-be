@@ -1,6 +1,11 @@
 #!/bin/sh
 
+set -a
+. ./.env
+set +a
+
 set -e
+
 
 NAS_SHARE_PATH="${NAS_SHARE_PATH:-//10.3.1.161/TzuChiApp}"
 NAS_MOUNT_PATH="${NAS_MOUNT_PATH:-/mnt/nas}"
