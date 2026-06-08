@@ -17,6 +17,7 @@ type Event struct {
 	CreatedBy          *int              `json:"created_by,omitempty"`
 	UpdatedBy          *int              `json:"updated_by,omitempty"`
 	DeletedBy          *int              `json:"deleted_by,omitempty"`
+	IsApplied          *bool             `json:"is_applied"`
 }
 
 type EventAttachment struct {
@@ -30,17 +31,18 @@ type EventAttachment struct {
 }
 
 type EventAttendance struct {
-	ID            int     `json:"id"`
-	EventID       int     `json:"event_id"`
-	VolunteerID   int     `json:"volunteer_id"`
-	Status        string  `json:"status"`
-	CheckinAt     *string `json:"checkin_at,omitempty"`
-	CheckoutAt    *string `json:"checkout_at,omitempty"`
-	CheckinPhoto  *string `json:"checkin_photo,omitempty"`
-	CheckoutPhoto *string `json:"checkout_photo,omitempty"`
-	CreatedBy     *int    `json:"created_by,omitempty"`
-	UpdatedBy     *int    `json:"updated_by,omitempty"`
-	DeletedBy     *int    `json:"deleted_by,omitempty"`
+	ID            int               `json:"id"`
+	EventID       int               `json:"event_id"`
+	VolunteerID   int               `json:"volunteer_id"`
+	Status        string            `json:"status"`
+	CheckinAt     *string           `json:"checkin_at,omitempty"`
+	CheckoutAt    *string           `json:"checkout_at,omitempty"`
+	CheckinPhoto  *string           `json:"checkin_photo,omitempty"`
+	CheckoutPhoto *string           `json:"checkout_photo,omitempty"`
+	CreatedBy     *int              `json:"created_by,omitempty"`
+	UpdatedBy     *int              `json:"updated_by,omitempty"`
+	DeletedBy     *int              `json:"deleted_by,omitempty"`
+	Volunteer     *VolunteerSummary `json:"volunteer,omitempty"`
 }
 
 type EventUserSummary struct {

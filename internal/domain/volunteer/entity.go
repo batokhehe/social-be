@@ -16,7 +16,7 @@ type Volunteer struct {
 	BirthDate             string     `json:"birth_date"`
 	MasterAreaID          int        `json:"master_area_id"`
 	LevelVolunteerID      int        `json:"level_volunteer_id"`
-	AttributeVolunteerID  int        `json:"attribute_volunteer_id"`
+	AttributeVolunteerID  *int       `json:"attribute_volunteer_id"`
 	ReligionID            int        `json:"religion_id"`
 	BloodType             string     `json:"blood_type"`
 	Rhesus                string     `json:"rhesus"`

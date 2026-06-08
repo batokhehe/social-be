@@ -1,7 +1,9 @@
 #!/bin/sh
 
 set -a
-. ./.env
+if [ -f ./.env ]; then
+  . ./.env
+fi
 set +a
 
 set -e
@@ -16,8 +18,8 @@ NAS_MOUNT_OPTIONS="${NAS_MOUNT_OPTIONS:-rw,dir_mode=0777,file_mode=0777,vers=3.0
 
 # If credentials not provided, skip mount
 if [ -z "$NAS_SHARE_USER" ] || [ -z "$NAS_SHARE_PASSWORD" ]; then
-  echo "⚠️  NAS_SHARE_USER and/or NAS_SHARE_PASSWORD not provided, cannot mount NAS"
-  exit 1
+  echo "⚠️  NAS_SHARE_USER and/or NAS_SHARE_PASSWORD not provided, skipping NAS mount"
+  exit 0
 fi
 
 mkdir -p "$NAS_MOUNT_PATH"

@@ -17,6 +17,7 @@ type Repository interface {
 	GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]User, int64, error)
 	GetByEmail(ctx context.Context, email string) (*User, string, int, error)
 	GetByID(ctx context.Context, id int) (*User, error)
+	UpdateProfilePhoto(ctx context.Context, userID int, profilePhoto string) error
 }
 
 type GormRepository struct {
@@ -146,4 +147,29 @@ func (r *GormRepository) GetByID(ctx context.Context, id int) (*User, error) {
 
 	user := toEntity(row)
 	return &user, nil
+}
+
+func (r *GormRepository) UpdateProfilePhoto(
+	ctx context.Context,
+	userID int,
+	profilePhoto string,
+) error {
+	result := r.DB.WithContext(ctx).
+		Model(&userModel{}).
+		Where("id = ? AND deleted_at IS NULL", userID).
+		Updates(map[string]interface{}{
+			"profile_photo": profilePhoto,
+			"updated_at":    time.Now(),
+		})
+
+	if result.Error != nil {
+		r.Logger.WithError(result.Error).Error("UpdateProfilePhoto failed")
+		return fmt.Errorf("failed update profile photo: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }

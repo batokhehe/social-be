@@ -11,11 +11,11 @@ CREATE TABLE IF NOT EXISTS donations (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_donations_donatur
         FOREIGN KEY (donatur_id)
-        REFERENCES donaturs(id)
+        REFERENCES master_donaturs(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_donations_donatur_group
         FOREIGN KEY (donatur_group_id)
-        REFERENCES donatur_groups(id)
+        REFERENCES master_donatur_groups(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_donations_area
         FOREIGN KEY (area_id)

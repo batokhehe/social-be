@@ -46,7 +46,8 @@ func (s *Service) UploadFile(ctx context.Context, file *multipart.FileHeader, mo
 		return "", err
 	}
 
-	targetDir := filepath.Join(mountPath, modulePath)
+	nasRootFolder := "TzuChiApp"
+	targetDir := filepath.Join(mountPath, nasRootFolder, modulePath)
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create upload directory: %w", err)
 	}

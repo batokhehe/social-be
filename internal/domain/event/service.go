@@ -2,11 +2,14 @@ package event
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"social-be/internal/domain/volunteer"
 	"social-be/internal/pkg/pagination"
+
+	"gorm.io/gorm"
 )
 
 type Service struct {
@@ -37,11 +40,34 @@ func (s *Service) GetAll(ctx context.Context, page pagination.Query) ([]Event, p
 	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
 }
 
-func (s *Service) GetActiveEvents(ctx context.Context, page pagination.Query) ([]Event, pagination.Meta, error) {
-	items, total, err := s.Repo.GetActiveEvents(ctx, time.Now(), page)
+func (s *Service) GetActiveEvents(
+	ctx context.Context,
+	userID int,
+	page pagination.Query,
+) ([]Event, pagination.Meta, error) {
+
+	volunteerData, err := s.VolunteerService.GetByUserID(ctx, userID)
+
+	volunteerID := 0
+
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, pagination.Meta{}, err
+		}
+	} else {
+		volunteerID = volunteerData.ID
+	}
+
+	items, total, err := s.Repo.GetActiveEvents(
+		ctx,
+		volunteerID,
+		time.Now(),
+		page,
+	)
 	if err != nil {
 		return nil, pagination.Meta{}, err
 	}
+
 	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
 }
 
@@ -51,6 +77,30 @@ func (s *Service) GetAppliedEvents(ctx context.Context, userID int, page paginat
 		return nil, pagination.Meta{}, err
 	}
 	items, total, err := s.Repo.GetAppliedEventsByVolunteer(ctx, volunteerData.ID, page)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
+}
+
+func (s *Service) GetCompletedEvents(ctx context.Context, userID int, page pagination.Query) ([]Event, pagination.Meta, error) {
+	volunteerData, err := s.VolunteerService.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+	items, total, err := s.Repo.GetCompletedEventsByVolunteer(ctx, volunteerData.ID, page)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
+}
+
+func (s *Service) GetDetailEventsByVolunteer(ctx context.Context, userID int, page pagination.Query) ([]Event, pagination.Meta, error) {
+	volunteerData, err := s.VolunteerService.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+	items, total, err := s.Repo.GetDetailEventsByVolunteer(ctx, volunteerData.ID, page)
 	if err != nil {
 		return nil, pagination.Meta{}, err
 	}

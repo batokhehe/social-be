@@ -44,6 +44,16 @@ func actorID(c *gin.Context) (int, bool) {
 	return id, true
 }
 
+// Create godoc
+// @Summary Create speak
+// @Description Create a new speak
+// @Tags speaks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateRequest true "Create speak request"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if ok := bindAndValidate(c, &req); !ok {
@@ -65,6 +75,16 @@ func (h *Handler) Create(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// GetAll godoc
+// @Summary Get all speaks
+// @Description Get paginated list of speaks
+// @Tags speaks
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	page, appErr := pagination.FromGin(c)
 	if appErr != nil {
@@ -82,6 +102,15 @@ func (h *Handler) GetAll(c *gin.Context) {
 	response.SuccessWithPagination(c, items, meta)
 }
 
+// GetByID godoc
+// @Summary Get speak by ID
+// @Description Get detail speak by ID
+// @Tags speaks
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Speak ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -98,6 +127,17 @@ func (h *Handler) GetByID(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// Update godoc
+// @Summary Update speak
+// @Description Update existing speak
+// @Tags speaks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Speak ID"
+// @Param request body UpdateRequest true "Update speak request"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -124,6 +164,15 @@ func (h *Handler) Update(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// Delete godoc
+// @Summary Delete speak
+// @Description Soft delete speak
+// @Tags speaks
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Speak ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -144,6 +193,17 @@ func (h *Handler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"message": "speak deleted"})
 }
 
+// Action godoc
+// @Summary Perform speak action
+// @Description Execute action on speak
+// @Tags speaks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Speak ID"
+// @Param request body ActionRequest true "Action request"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/{id}/action [post]
 func (h *Handler) Action(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -170,6 +230,17 @@ func (h *Handler) Action(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// CreateAttachment godoc
+// @Summary Upload speak attachment
+// @Description Upload attachment file for a speak
+// @Tags speaks
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Speak ID"
+// @Param attachment formData file true "Attachment file"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/{id}/attachments [post]
 func (h *Handler) CreateAttachment(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -204,6 +275,15 @@ func (h *Handler) CreateAttachment(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// GetAttachments godoc
+// @Summary Get speak attachments
+// @Description Get all attachments for a speak
+// @Tags speaks
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Speak ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/{id}/attachments [get]
 func (h *Handler) GetAttachments(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

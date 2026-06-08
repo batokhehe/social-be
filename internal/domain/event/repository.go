@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"social-be/internal/pkg/helper"
 	"social-be/internal/pkg/pagination"
 
 	"github.com/sirupsen/logrus"
@@ -15,8 +16,9 @@ import (
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, startAt, endAt time.Time, actorID int) (*Event, error)
 	GetPaginated(ctx context.Context, page pagination.Query) ([]Event, int64, error)
-	GetActiveEvents(ctx context.Context, now time.Time, page pagination.Query) ([]Event, int64, error)
+	GetActiveEvents(ctx context.Context, userID int, now time.Time, page pagination.Query) ([]Event, int64, error)
 	GetAppliedEventsByVolunteer(ctx context.Context, volunteerID int, page pagination.Query) ([]Event, int64, error)
+	GetCompletedEventsByVolunteer(ctx context.Context, volunteerID int, page pagination.Query) ([]Event, int64, error)
 	GetByID(ctx context.Context, id int) (*Event, error)
 	Update(ctx context.Context, id int, req UpdateRequest, startAt, endAt time.Time, actorID int) (*Event, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
@@ -25,6 +27,7 @@ type Repository interface {
 	Apply(ctx context.Context, eventID int, volunteerID int, actorID int) (*EventAttendance, error)
 	CheckIn(ctx context.Context, eventID int, volunteerID int, photoPath *string, actorID int) (*EventAttendance, error)
 	CheckOut(ctx context.Context, eventID int, volunteerID int, photoPath *string, actorID int) (*EventAttendance, error)
+	GetDetailEventsByVolunteer(ctx context.Context, volunteerID int, page pagination.Query) ([]Event, int64, error)
 }
 
 type GormRepository struct {
@@ -53,6 +56,24 @@ type eventModel struct {
 	DeletedAt          *time.Time `gorm:"column:deleted_at"`
 }
 
+type activeEventRow struct {
+	ID                 int        `gorm:"column:id"`
+	Name               string     `gorm:"column:name"`
+	StartAt            time.Time  `gorm:"column:start_at"`
+	EndAt              time.Time  `gorm:"column:end_at"`
+	CategoryActivityID int        `gorm:"column:category_activity_id"`
+	ActivityID         int        `gorm:"column:activity_id"`
+	PicUserID          int        `gorm:"column:pic_user_id"`
+	Status             string     `gorm:"column:status"`
+	CreatedBy          *int       `gorm:"column:created_by"`
+	UpdatedBy          *int       `gorm:"column:updated_by"`
+	DeletedBy          *int       `gorm:"column:deleted_by"`
+	CreatedAt          time.Time  `gorm:"column:created_at"`
+	UpdatedAt          time.Time  `gorm:"column:updated_at"`
+	DeletedAt          *time.Time `gorm:"column:deleted_at"`
+	IsApplied          bool       `gorm:"column:is_applied"`
+}
+
 type eventAttachmentModel struct {
 	ID          int        `gorm:"column:id"`
 	EventID     int        `gorm:"column:event_id"`
@@ -66,21 +87,57 @@ type eventAttachmentModel struct {
 	DeletedAt   *time.Time `gorm:"column:deleted_at"`
 }
 
+type volunteerModel struct {
+	ID                   int        `gorm:"column:id"`
+	UserID               int        `gorm:"column:user_id"`
+	TzuhiAppID           string     `gorm:"column:tzuhi_app_id"`
+	VISID                string     `gorm:"column:vis_id"`
+	IndonesianName       string     `gorm:"column:indonesian_name"`
+	MandarinName         string     `gorm:"column:mandarin_name"`
+	BirthPlace           string     `gorm:"column:birth_place"`
+	BirthDate            time.Time  `gorm:"column:birth_date"`
+	MasterAreaID         int        `gorm:"column:master_area_id"`
+	LevelVolunteerID     int        `gorm:"column:level_volunteer_id"`
+	AttributeVolunteerID *int       `gorm:"column:attribute_volunteer_id"`
+	ReligionID           int        `gorm:"column:religion_id"`
+	BloodType            string     `gorm:"column:blood_type"`
+	Rhesus               string     `gorm:"column:rhesus"`
+	LastEducation        string     `gorm:"column:last_education"`
+	MaritalStatus        string     `gorm:"column:marital_status"`
+	Profession           string     `gorm:"column:profession"`
+	Field                string     `gorm:"column:field"`
+	ResidentialAddress   string     `gorm:"column:residential_address"`
+	PostalCode           string     `gorm:"column:postal_code"`
+	HomePhone            string     `gorm:"column:home_phone"`
+	OfficePhone          string     `gorm:"column:office_phone"`
+	Phone                string     `gorm:"column:phone"`
+	Email                string     `gorm:"column:email"`
+	Languages            string     `gorm:"column:languages"`
+	PrivateVehicle       bool       `gorm:"column:private_vehicle"`
+	RegularDonor         bool       `gorm:"column:regular_donor"`
+	Status               string     `gorm:"column:status"`
+	CreatedBy            *int       `gorm:"column:created_by"`
+	UpdatedBy            *int       `gorm:"column:updated_by"`
+	DeletedBy            *int       `gorm:"column:deleted_by"`
+	DeletedAt            *time.Time `gorm:"column:deleted_at"`
+}
+
 type eventAttendanceModel struct {
-	ID            int        `gorm:"column:id"`
-	EventID       int        `gorm:"column:event_id"`
-	VolunteerID   int        `gorm:"column:volunteer_id"`
-	Status        string     `gorm:"column:status"`
-	CheckinAt     *time.Time `gorm:"column:checkin_at"`
-	CheckoutAt    *time.Time `gorm:"column:checkout_at"`
-	CheckinPhoto  *string    `gorm:"column:checkin_photo"`
-	CheckoutPhoto *string    `gorm:"column:checkout_photo"`
-	CreatedBy     *int       `gorm:"column:created_by"`
-	UpdatedBy     *int       `gorm:"column:updated_by"`
-	DeletedBy     *int       `gorm:"column:deleted_by"`
-	CreatedAt     time.Time  `gorm:"column:created_at"`
-	UpdatedAt     time.Time  `gorm:"column:updated_at"`
-	DeletedAt     *time.Time `gorm:"column:deleted_at"`
+	ID            int             `gorm:"column:id"`
+	EventID       int             `gorm:"column:event_id"`
+	VolunteerID   int             `gorm:"column:volunteer_id"`
+	Status        string          `gorm:"column:status"`
+	CheckinAt     *time.Time      `gorm:"column:checkin_at"`
+	CheckoutAt    *time.Time      `gorm:"column:checkout_at"`
+	CheckinPhoto  *string         `gorm:"column:checkin_photo"`
+	CheckoutPhoto *string         `gorm:"column:checkout_photo"`
+	CreatedBy     *int            `gorm:"column:created_by"`
+	UpdatedBy     *int            `gorm:"column:updated_by"`
+	DeletedBy     *int            `gorm:"column:deleted_by"`
+	CreatedAt     time.Time       `gorm:"column:created_at"`
+	UpdatedAt     time.Time       `gorm:"column:updated_at"`
+	DeletedAt     *time.Time      `gorm:"column:deleted_at"`
+	Volunteer     *volunteerModel `gorm:"foreignKey:VolunteerID;references:ID"`
 }
 
 type userModel struct {
@@ -89,10 +146,20 @@ type userModel struct {
 	Email string `gorm:"column:email"`
 }
 
+type VolunteerSummary struct {
+	ID             int    `json:"id"`
+	UserID         int    `json:"user_id"`
+	IndonesianName string `json:"indonesian_name"`
+	MandarinName   string `json:"mandarin_name"`
+	Phone          string `json:"phone"`
+	Email          string `json:"email"`
+}
+
 func (eventModel) TableName() string           { return "events" }
 func (eventAttachmentModel) TableName() string { return "event_attachments" }
 func (eventAttendanceModel) TableName() string { return "event_attendances" }
 func (userModel) TableName() string            { return "users" }
+func (volunteerModel) TableName() string       { return "volunteers" }
 
 func toEntity(item eventModel) Event {
 	return Event{
@@ -142,6 +209,18 @@ func toAttendanceEntity(item eventAttendanceModel) EventAttendance {
 	}
 	attendance.CheckinPhoto = item.CheckinPhoto
 	attendance.CheckoutPhoto = item.CheckoutPhoto
+
+	if item.Volunteer.ID != 0 {
+		attendance.Volunteer = &VolunteerSummary{
+			ID:             item.Volunteer.ID,
+			UserID:         item.Volunteer.UserID,
+			IndonesianName: item.Volunteer.IndonesianName,
+			MandarinName:   item.Volunteer.MandarinName,
+			Phone:          item.Volunteer.Phone,
+			Email:          item.Volunteer.Email,
+		}
+	}
+
 	return attendance
 }
 
@@ -183,23 +262,65 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 	return items, total, nil
 }
 
-func (r *GormRepository) GetActiveEvents(ctx context.Context, now time.Time, page pagination.Query) ([]Event, int64, error) {
+func (r *GormRepository) GetActiveEvents(
+	ctx context.Context,
+	userID int,
+	now time.Time,
+	page pagination.Query,
+) ([]Event, int64, error) {
+
 	var total int64
-	baseQuery := r.DB.WithContext(ctx).Model(&eventModel{}).
-		Where("status = ? AND deleted_at IS NULL AND end_at >= ?", "active", now)
+
+	baseQuery := r.DB.WithContext(ctx).
+		Model(&eventModel{}).
+		Select(`
+			events.*,
+			EXISTS (
+				SELECT 1
+				FROM event_attendances ep
+				WHERE ep.event_id = events.id
+				AND ep.volunteer_id = ?
+			) AS is_applied
+		`, userID).
+		Where(
+			"status = ? AND deleted_at IS NULL AND end_at >= ?",
+			"active",
+			now,
+		)
+
 	if err := baseQuery.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed count active events: %w", err)
 	}
-	var rows []eventModel
-	if err := baseQuery.Order("start_at ASC").Limit(page.Limit).Offset(page.Offset).Find(&rows).Error; err != nil {
+
+	var rows []activeEventRow
+
+	if err := baseQuery.
+		Order("start_at ASC").
+		Limit(page.Limit).
+		Offset(page.Offset).
+		Find(&rows).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed get active events: %w", err)
 	}
+
 	items := make([]Event, 0, len(rows))
+
 	for _, row := range rows {
-		item := toEntity(row)
+		item := Event{
+			ID:                 row.ID,
+			Name:               row.Name,
+			StartAt:            row.StartAt,
+			EndAt:              row.EndAt,
+			CategoryActivityID: row.CategoryActivityID,
+			ActivityID:         row.ActivityID,
+			PicUserID:          row.PicUserID,
+			Status:             row.Status,
+			IsApplied:          &row.IsApplied,
+		}
+		item.IsApplied = &row.IsApplied
 		_ = r.loadPicUser(ctx, &item)
 		items = append(items, item)
 	}
+
 	return items, total, nil
 }
 
@@ -208,7 +329,8 @@ func (r *GormRepository) GetAppliedEventsByVolunteer(ctx context.Context, volunt
 		Joins("JOIN event_attendances ON event_attendances.event_id = events.id").
 		Where("events.deleted_at IS NULL").
 		Where("event_attendances.deleted_at IS NULL").
-		Where("event_attendances.volunteer_id = ?", volunteerID)
+		Where("event_attendances.volunteer_id = ?", volunteerID).
+		Where("event_attendances.checkout_at IS NULL")
 
 	var total int64
 	if err := baseQuery.Count(&total).Error; err != nil {
@@ -229,6 +351,95 @@ func (r *GormRepository) GetAppliedEventsByVolunteer(ctx context.Context, volunt
 		item := toEntity(row)
 		_ = r.loadPicUser(ctx, &item)
 		if err := r.loadAttendanceByVolunteer(ctx, &item, volunteerID); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, nil
+}
+
+func (r *GormRepository) GetCompletedEventsByVolunteer(
+	ctx context.Context,
+	volunteerID int,
+	page pagination.Query,
+) ([]Event, int64, error) {
+
+	baseQuery := r.DB.WithContext(ctx).
+		Model(&eventModel{}).
+		Joins("JOIN event_attendances ON event_attendances.event_id = events.id").
+		Where("events.deleted_at IS NULL").
+		Where("event_attendances.deleted_at IS NULL").
+		Where("event_attendances.volunteer_id = ?", volunteerID).
+		Where("event_attendances.checkout_at IS NOT NULL")
+
+	var total int64
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed count completed events: %w", err)
+	}
+
+	var rows []eventModel
+	if err := baseQuery.
+		Order("event_attendances.checkout_at DESC").
+		Limit(page.Limit).
+		Offset(page.Offset).
+		Find(&rows).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed get completed events: %w", err)
+	}
+
+	items := make([]Event, 0, len(rows))
+
+	for _, row := range rows {
+		item := toEntity(row)
+		_ = r.loadPicUser(ctx, &item)
+		if err := r.loadAttendanceByVolunteer(
+			ctx,
+			&item,
+			volunteerID,
+		); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, nil
+}
+
+func (r *GormRepository) GetDetailEventsByVolunteer(
+	ctx context.Context,
+	volunteerID int,
+	page pagination.Query,
+) ([]Event, int64, error) {
+
+	baseQuery := r.DB.WithContext(ctx).
+		Model(&eventModel{}).
+		Joins("JOIN event_attendances ON event_attendances.event_id = events.id").
+		Where("events.deleted_at IS NULL").
+		Where("event_attendances.deleted_at IS NULL").
+		Where("event_attendances.volunteer_id = ?", volunteerID)
+
+	var total int64
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed count completed events: %w", err)
+	}
+
+	var rows []eventModel
+	if err := baseQuery.
+		Order("event_attendances.checkout_at DESC").
+		Limit(page.Limit).
+		Offset(page.Offset).
+		Find(&rows).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed get completed events: %w", err)
+	}
+
+	items := make([]Event, 0, len(rows))
+
+	for _, row := range rows {
+		item := toEntity(row)
+		_ = r.loadPicUser(ctx, &item)
+		if err := r.loadAttendanceByVolunteer(
+			ctx,
+			&item,
+			volunteerID,
+		); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, item)
@@ -432,6 +643,7 @@ func (r *GormRepository) loadAttachments(ctx context.Context, event *Event) erro
 func (r *GormRepository) loadAttendances(ctx context.Context, event *Event) error {
 	var rows []eventAttendanceModel
 	if err := r.DB.WithContext(ctx).
+		Preload("Volunteer").
 		Where("event_id = ? AND deleted_at IS NULL", event.ID).
 		Order("id ASC").
 		Find(&rows).Error; err != nil {
@@ -445,14 +657,38 @@ func (r *GormRepository) loadAttendances(ctx context.Context, event *Event) erro
 	return nil
 }
 
-func (r *GormRepository) loadAttendanceByVolunteer(ctx context.Context, event *Event, volunteerID int) error {
+func (r *GormRepository) loadAttendanceByVolunteer(
+	ctx context.Context,
+	event *Event,
+	volunteerID int,
+) error {
+
 	var row eventAttendanceModel
+
 	if err := r.DB.WithContext(ctx).
-		Where("event_id = ? AND volunteer_id = ? AND deleted_at IS NULL", event.ID, volunteerID).
+		Where(
+			"event_id = ? AND volunteer_id = ? AND deleted_at IS NULL",
+			event.ID,
+			volunteerID,
+		).
 		Take(&row).Error; err != nil {
 		return fmt.Errorf("failed get event attendance: %w", err)
 	}
-	event.Attendances = []EventAttendance{toAttendanceEntity(row)}
+
+	attendance := toAttendanceEntity(row)
+
+	if attendance.CheckinPhoto != nil {
+		url := helper.BuildFileURL(*attendance.CheckinPhoto)
+		attendance.CheckinPhoto = &url
+	}
+
+	if attendance.CheckoutPhoto != nil {
+		url := helper.BuildFileURL(*attendance.CheckoutPhoto)
+		attendance.CheckoutPhoto = &url
+	}
+
+	event.Attendances = []EventAttendance{attendance}
+
 	return nil
 }
 

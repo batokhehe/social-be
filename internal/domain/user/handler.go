@@ -171,7 +171,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 
 // UploadProfilePhoto godoc
 // @Summary Upload profile photo
-// @Description Upload profile photo to NAS and return URL
+// @Description Upload profile photo to NAS and update user profile photo
 // @Tags users
 // @Accept multipart/form-data
 // @Produce json
@@ -182,27 +182,70 @@ func (h *Handler) CreateUser(c *gin.Context) {
 func (h *Handler) UploadProfilePhoto(c *gin.Context) {
 	file, err := c.FormFile("profile_photo")
 	if err != nil {
-		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidBody, "profile_photo is required"))
+		response.AbortError(c, apperror.New(
+			http.StatusBadRequest,
+			apperror.CodeInvalidBody,
+			"profile_photo is required",
+		))
 		return
 	}
 
-	// Validate file
 	if err := validatePhotoFile(file); err != nil {
-		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidBody, err.Error()))
+		response.AbortError(c, apperror.New(
+			http.StatusBadRequest,
+			apperror.CodeInvalidBody,
+			err.Error(),
+		))
+		return
+	}
+
+	userIDVal, ok := c.Get("user_id")
+	if !ok {
+		response.AbortError(c, apperror.New(
+			http.StatusUnauthorized,
+			apperror.CodeActorNotFound,
+			"user not found",
+		))
+		return
+	}
+
+	userID, ok := userIDVal.(int)
+	if !ok {
+		response.AbortError(c, apperror.New(
+			http.StatusUnauthorized,
+			apperror.CodeActorNotFound,
+			"invalid user",
+		))
 		return
 	}
 
 	ctx := c.Request.Context()
 
-	// Call global upload service with "user" module
 	filePath, err := h.UploadService.UploadFile(ctx, file, "user")
 	if err != nil {
-		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to upload photo")
-		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, apperror.CodeInternal, "failed to upload photo"))
+		logger.FromContext(ctx).WithError(err).Error("failed to upload photo")
+
+		response.AbortError(c, apperror.Wrap(
+			err,
+			http.StatusInternalServerError,
+			apperror.CodeInternal,
+			"failed to upload photo",
+		))
 		return
 	}
 
-	logger.FromContext(c.Request.Context()).WithField("path", filePath).Info("photo uploaded successfully")
+	// update profile photo user
+	if err := h.Service.UpdateProfilePhoto(ctx, userID, filePath); err != nil {
+		logger.FromContext(ctx).WithError(err).Error("failed to update profile photo")
+
+		response.AbortError(c, apperror.Wrap(
+			err,
+			http.StatusInternalServerError,
+			"DB_003",
+			"failed to update profile photo",
+		))
+		return
+	}
 
 	response.Success(c, gin.H{
 		"profile_photo_path": filePath,

@@ -5,9 +5,9 @@ type MasterDonatur struct {
 	DonaturID      string `json:"id_donatur"`
 	Phone          string `json:"telepon"`
 	TzuChiAppID    string `json:"id_tzu_chi_app"`
-	VisVolunteerID string `json:"id_vis_relawan"`
+	VisVolunteerID string `json:"id_vis_volunteer"`
 	DonaturGroupID *int   `json:"id_group_donatur,omitempty"`
-	Area           string `json:"area"`
+	Name           string `json:"name"`
 	Status         string `json:"status"`
 	CreatedBy      *int   `json:"created_by,omitempty"`
 	UpdatedBy      *int   `json:"updated_by,omitempty"`

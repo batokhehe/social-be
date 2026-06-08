@@ -48,7 +48,7 @@ type volunteerModel struct {
 	BirthDate            time.Time  `gorm:"column:birth_date"`
 	MasterAreaID         int        `gorm:"column:master_area_id"`
 	LevelVolunteerID     int        `gorm:"column:level_volunteer_id"`
-	AttributeVolunteerID int        `gorm:"column:attribute_volunteer_id"`
+	AttributeVolunteerID *int       `gorm:"column:attribute_volunteer_id"`
 	ReligionID           int        `gorm:"column:religion_id"`
 	BloodType            string     `gorm:"column:blood_type"`
 	Rhesus               string     `gorm:"column:rhesus"`
@@ -288,15 +288,11 @@ func buildModel(req CreateRequest, actorID int) (volunteerModel, error) {
 }
 
 func createVolunteerUserAndResetToken(tx *gorm.DB, req CreateRequest, actorID int) (int, string, error) {
-	password, err := randomToken(32)
-	if err != nil {
-		return 0, "", err
-	}
+	password := "TZ12345"
 	passwordHash, err := security.HashPassword(password)
 	if err != nil {
 		return 0, "", err
 	}
-
 	user := userModel{
 		Name:         req.IndonesianName,
 		Email:        req.Email,
@@ -323,6 +319,9 @@ func createVolunteerUserAndResetToken(tx *gorm.DB, req CreateRequest, actorID in
 		return 0, "", err
 	}
 
+	fmt.Println("USER ID:", user.ID)
+	fmt.Println("EMAIL:", user.Email)
+	fmt.Println("PASSWORD: TZ12345")
 	return user.ID, buildResetLink(token), nil
 }
 

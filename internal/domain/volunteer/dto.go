@@ -30,7 +30,7 @@ type CreateRequest struct {
 	BirthDate             string            `json:"birth_date" validate:"required"`
 	MasterAreaID          int               `json:"master_area_id" validate:"required,min=1"`
 	LevelVolunteerID      int               `json:"level_volunteer_id" validate:"required,min=1"`
-	AttributeVolunteerID  int               `json:"attribute_volunteer_id" validate:"required,min=1"`
+	AttributeVolunteerID  *int              `json:"attribute_volunteer_id"`
 	ReligionID            int               `json:"religion_id" validate:"required,min=1"`
 	BloodType             string            `json:"blood_type" validate:"required,oneof=A B AB O"`
 	Rhesus                string            `json:"rhesus" validate:"required,oneof=positive negative unknown"`
@@ -42,8 +42,8 @@ type CreateRequest struct {
 	PostalCode            string            `json:"postal_code" validate:"required,max=20"`
 	HomePhone             string            `json:"home_phone" validate:"omitempty,max=30"`
 	OfficePhone           string            `json:"office_phone" validate:"omitempty,max=30"`
-	Phone                 string            `json:"phone" validate:"required,max=30"`
-	Email                 string            `json:"email" validate:"required,email,max=100"`
+	Phone                 string            `json:"phone" validate:"max=30"`
+	Email                 string            `json:"email" validate:"email,max=100"`
 	InterestedActivityIDs []int             `json:"interested_activity_ids" validate:"required,min=1,dive,min=1"`
 	Languages             string            `json:"languages" validate:"required,max=255"`
 	PrivateVehicle        bool              `json:"private_vehicle"`

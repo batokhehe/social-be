@@ -3601,7 +3601,7 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50
                 },
-                "id_vis_relawan": {
+                "id_vis_volunteer": {
                     "type": "string",
                     "maxLength": 50
                 },
@@ -3641,7 +3641,7 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50
                 },
-                "id_vis_relawan": {
+                "id_vis_volunteer": {
                     "type": "string",
                     "maxLength": 50
                 },

@@ -132,3 +132,23 @@ func (s *Service) GetByID(ctx context.Context, id int) (*User, error) {
 
 	return user, nil
 }
+
+func (s *Service) UpdateProfilePhoto(
+	ctx context.Context,
+	userID int,
+	profilePhoto string,
+) error {
+	if err := s.Repo.UpdateProfilePhoto(
+		ctx,
+		userID,
+		profilePhoto,
+	); err != nil {
+		return err
+	}
+
+	// hapus cache user
+	cache.RDB.Del(ctx, fmt.Sprintf(userByIDCacheKeyFormat, userID))
+	cache.RDB.Del(ctx, userListCacheKey)
+
+	return nil
+}

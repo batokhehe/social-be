@@ -257,7 +257,11 @@ func (h *Handler) GetVolunteerEvents(c *gin.Context) {
 		response.AbortError(c, appErr)
 		return
 	}
-	items, meta, err := h.Service.GetActiveEvents(c.Request.Context(), page)
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+	items, meta, err := h.Service.GetActiveEvents(c.Request.Context(), actor, page)
 	if err != nil {
 		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch volunteer events")
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_907", "failed to fetch events"))
@@ -290,6 +294,64 @@ func (h *Handler) GetAppliedVolunteerEvents(c *gin.Context) {
 	if err != nil {
 		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch applied volunteer events")
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_912", "failed to fetch applied events"))
+		return
+	}
+	response.SuccessWithPagination(c, items, meta)
+}
+
+// GetCompletedVolunteerEvents godoc
+// @Summary Get completed events for volunteer
+// @Description List events that current volunteer has completed
+// @Tags event
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /events/completed [get]
+func (h *Handler) GetCompletedVolunteerEvents(c *gin.Context) {
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+	items, meta, err := h.Service.GetCompletedEvents(c.Request.Context(), actor, page)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch completed volunteer events")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_912", "failed to fetch completed events"))
+		return
+	}
+	response.SuccessWithPagination(c, items, meta)
+}
+
+// GetDetailEventsByVolunteer godoc
+// @Summary Get detail events for volunteer
+// @Description List events that current volunteer has registered for
+// @Tags event
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /events/{id}/detail [get]
+func (h *Handler) GetDetailEventsByVolunteer(c *gin.Context) {
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+	items, meta, err := h.Service.GetDetailEventsByVolunteer(c.Request.Context(), actor, page)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch detail volunteer events")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_912", "failed to fetch detail events"))
 		return
 	}
 	response.SuccessWithPagination(c, items, meta)

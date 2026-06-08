@@ -37,9 +37,9 @@ type masterDonaturModel struct {
 	DonaturID      string     `gorm:"column:id_donatur"`
 	Phone          string     `gorm:"column:telepon"`
 	TzuChiAppID    string     `gorm:"column:id_tzu_chi_app"`
-	VisVolunteerID string     `gorm:"column:id_vis_relawan"`
+	VisVolunteerID string     `gorm:"column:id_vis_volunteer"`
 	DonaturGroupID *int       `gorm:"column:id_group_donatur"`
-	Area           string     `gorm:"column:area"`
+	Name           string     `gorm:"column:name"`
 	Status         string     `gorm:"column:status"`
 	CreatedBy      *int       `gorm:"column:created_by"`
 	UpdatedBy      *int       `gorm:"column:updated_by"`
@@ -59,7 +59,7 @@ func toEntity(item masterDonaturModel) MasterDonatur {
 		TzuChiAppID:    item.TzuChiAppID,
 		VisVolunteerID: item.VisVolunteerID,
 		DonaturGroupID: item.DonaturGroupID,
-		Area:           item.Area,
+		Name:           item.Name,
 		Status:         item.Status,
 		CreatedBy:      item.CreatedBy,
 		UpdatedBy:      item.UpdatedBy,
@@ -74,7 +74,7 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 		TzuChiAppID:    req.TzuChiAppID,
 		VisVolunteerID: req.VisVolunteerID,
 		DonaturGroupID: req.DonaturGroupID,
-		Area:           req.Area,
+		Name:           req.Name,
 		Status:         defaultString(req.Status, "active"),
 		CreatedBy:      &actorID,
 		UpdatedBy:      &actorID,
@@ -178,9 +178,9 @@ func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, 
 			"id_donatur":       req.DonaturID,
 			"telepon":          req.Phone,
 			"id_tzu_chi_app":   req.TzuChiAppID,
-			"id_vis_relawan":   req.VisVolunteerID,
+			"id_vis_volunteer":   req.VisVolunteerID,
 			"id_group_donatur": req.DonaturGroupID,
-			"area":             req.Area,
+			"name":             req.Name,
 			"status":           defaultString(req.Status, existing.Status),
 			"updated_by":       actorID,
 			"updated_at":       time.Now(),

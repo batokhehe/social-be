@@ -26,7 +26,7 @@ func NewHandler(service *Service) *Handler {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
-// @Router /master/donations [get]
+// @Router /donations [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	items, err := h.Service.GetAll(c.Request.Context())
 	if err != nil {
@@ -45,7 +45,7 @@ func (h *Handler) GetAll(c *gin.Context) {
 // @Security BearerAuth
 // @Param request body CreateRequest true "Create donation"
 // @Success 200 {object} map[string]interface{}
-// @Router /master/donations [post]
+// @Router /donations [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if err := validation.BindJSON(c, &req); err != nil {
@@ -70,7 +70,7 @@ func (h *Handler) Create(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Donation ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /master/donations/{id} [get]
+// @Router /donations/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -97,7 +97,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Param id path int true "Donation ID"
 // @Param request body UpdateRequest true "Update donation"
 // @Success 200 {object} map[string]interface{}
-// @Router /master/donations/{id} [put]
+// @Router /donations/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -128,7 +128,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Donation ID"
 // @Success 200 {object} map[string]interface{}
-// @Router /master/donations/{id} [delete]
+// @Router /donations/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

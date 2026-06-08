@@ -37,12 +37,12 @@ COPY --from=builder /app/app .
 COPY --from=builder /app/docs ./docs
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/migrate.sh .
-COPY mount-nas.sh .
-RUN chmod +x ./mount-nas.sh
+# COPY mount-nas.sh .
+# RUN chmod +x ./mount-nas.sh
 
 # permission
 RUN chmod +x ./app ./migrate.sh
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "./mount-nas.sh && ./migrate.sh && ./app"]
+CMD ["sh", "-c", "./migrate.sh && ./app"]
