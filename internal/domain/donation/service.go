@@ -15,8 +15,8 @@ func NewService(repo Repository) *Service {
 func (s *Service) Create(ctx context.Context, req CreateRequest) (*Donation, error) {
 	item := &Donation{
 		DonaturID:          req.DonaturID,
-		DonaturGroupID:     req.DonaturGroupID,
-		AreaID:             req.AreaID,
+		DonaturGroupID:     &req.DonaturGroupID,
+		AreaID:             &req.AreaID,
 		DonationCategoryID: req.DonationCategoryID,
 		Currency:           req.Currency,
 		Amount:             req.Amount,
@@ -37,8 +37,8 @@ func (s *Service) Update(ctx context.Context, id int, req UpdateRequest) (*Donat
 	item := &Donation{
 		ID:                 id,
 		DonaturID:          req.DonaturID,
-		DonaturGroupID:     req.DonaturGroupID,
-		AreaID:             req.AreaID,
+		DonaturGroupID:     &req.DonaturGroupID,
+		AreaID:             &req.AreaID,
 		DonationCategoryID: req.DonationCategoryID,
 		Currency:           req.Currency,
 		Amount:             req.Amount,

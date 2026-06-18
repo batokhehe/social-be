@@ -13,5 +13,5 @@ CREATE TABLE IF NOT EXISTS master_donaturs (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     deleted_at TIMESTAMP NULL,
-    CONSTRAINT fk_master_donaturs_donatur_group FOREIGN KEY (id_donatur_group) REFERENCES master_donatur_groups(id)
+    CONSTRAINT fk_master_donaturs_donatur_group FOREIGN KEY (id_group_donatur) REFERENCES master_donatur_groups(id)
 );

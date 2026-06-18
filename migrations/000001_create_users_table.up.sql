@@ -2,6 +2,7 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
+    vis_id TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role INT NOT NULL DEFAULT 0,
     status INT NOT NULL DEFAULT 0,

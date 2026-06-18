@@ -20,6 +20,14 @@ func (s *Service) GetPaginated(ctx context.Context, page pagination.Query) ([]Vo
 	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
 }
 
+func (s *Service) GetSelect(ctx context.Context) ([]Volunteer, pagination.Meta, error) {
+	items, total, err := s.Repo.GetSelect(ctx)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+	return items, pagination.NewMeta(1, int(total), total), nil
+}
+
 func (s *Service) GetByID(ctx context.Context, id int) (*Volunteer, error) {
 	return s.Repo.GetByID(ctx, id)
 }

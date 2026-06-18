@@ -14,6 +14,7 @@ type Volunteer struct {
 	MandarinName          string     `json:"mandarin_name"`
 	BirthPlace            string     `json:"birth_place"`
 	BirthDate             string     `json:"birth_date"`
+	Gender                string     `json:"gender"`
 	MasterAreaID          int        `json:"master_area_id"`
 	LevelVolunteerID      int        `json:"level_volunteer_id"`
 	AttributeVolunteerID  *int       `json:"attribute_volunteer_id"`
@@ -25,6 +26,8 @@ type Volunteer struct {
 	Profession            string     `json:"profession"`
 	Field                 string     `json:"field"`
 	ResidentialAddress    string     `json:"residential_address"`
+	KTPAddress            string     `json:"ktp_address"`
+	District              string     `json:"district"`
 	PostalCode            string     `json:"postal_code"`
 	HomePhone             string     `json:"home_phone"`
 	OfficePhone           string     `json:"office_phone"`

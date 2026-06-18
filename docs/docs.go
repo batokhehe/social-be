@@ -55,6 +55,183 @@ const docTemplate = `{
                 }
             }
         },
+        "/donations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of donations",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get all donations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new donation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Create donation",
+                "parameters": [
+                    {
+                        "description": "Create donation",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/donation.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail donation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get donation by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Donation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing donation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Update donation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Donation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update donation",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/donation.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete donation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Delete donation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Donation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/email/test": {
             "post": {
                 "description": "Queues an email delivery request to SMTP and returns immediately. No real-time delivery confirmation is returned.",
@@ -145,6 +322,46 @@ const docTemplate = `{
                     "event"
                 ],
                 "summary": "Get applied events for volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/events/completed": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List events that current volunteer has completed",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get completed events for volunteer",
                 "parameters": [
                     {
                         "type": "integer",
@@ -301,6 +518,46 @@ const docTemplate = `{
                         "description": "Checkout photo",
                         "name": "photo",
                         "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{id}/detail": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List events that current volunteer has registered for",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event"
+                ],
+                "summary": "Get detail events for volunteer",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -892,183 +1149,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Master Donation Category ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/master/donations": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get list of donations",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "donation"
-                ],
-                "summary": "Get all donations",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create new donation",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "donation"
-                ],
-                "summary": "Create donation",
-                "parameters": [
-                    {
-                        "description": "Create donation",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/donation.CreateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/master/donations/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get detail donation",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "donation"
-                ],
-                "summary": "Get donation by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Donation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update existing donation",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "donation"
-                ],
-                "summary": "Update donation",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Donation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Update donation",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/donation.UpdateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Delete donation",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "donation"
-                ],
-                "summary": "Delete donation",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Donation ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2859,6 +2939,322 @@ const docTemplate = `{
                 }
             }
         },
+        "/speaks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of speaks",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Get all speaks",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new speak",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Create speak",
+                "parameters": [
+                    {
+                        "description": "Create speak request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/speak.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/speaks/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detail speak by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Get speak by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Speak ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing speak",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Update speak",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Speak ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update speak request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/speak.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete speak",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Delete speak",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Speak ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/speaks/{id}/action": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Execute action on speak",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Perform speak action",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Speak ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Action request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/speak.ActionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/speaks/{id}/attachments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all attachments for a speak",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Get speak attachments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Speak ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload attachment file for a speak",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Upload speak attachment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Speak ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Attachment file",
+                        "name": "attachment",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -2918,7 +3314,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload profile photo to NAS and return URL",
+                "description": "Upload profile photo to NAS and update user profile photo",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -3581,15 +3977,11 @@ const docTemplate = `{
         "masterdonatur.CreateRequest": {
             "type": "object",
             "required": [
-                "area",
                 "id_donatur",
+                "name",
                 "telepon"
             ],
             "properties": {
-                "area": {
-                    "type": "string",
-                    "maxLength": 100
-                },
                 "id_donatur": {
                     "type": "string",
                     "maxLength": 50
@@ -3604,6 +3996,10 @@ const docTemplate = `{
                 "id_vis_volunteer": {
                     "type": "string",
                     "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "status": {
                     "type": "string",
@@ -3621,15 +4017,11 @@ const docTemplate = `{
         "masterdonatur.UpdateRequest": {
             "type": "object",
             "required": [
-                "area",
                 "id_donatur",
+                "name",
                 "telepon"
             ],
             "properties": {
-                "area": {
-                    "type": "string",
-                    "maxLength": 100
-                },
                 "id_donatur": {
                     "type": "string",
                     "maxLength": 50
@@ -3644,6 +4036,10 @@ const docTemplate = `{
                 "id_vis_volunteer": {
                     "type": "string",
                     "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "status": {
                     "type": "string",
@@ -3772,6 +4168,77 @@ const docTemplate = `{
                 }
             }
         },
+        "speak.ActionRequest": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "progress",
+                        "finish"
+                    ]
+                }
+            }
+        },
+        "speak.CreateRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "pic"
+            ],
+            "properties": {
+                "category_id": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "is_anonymous": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "pic": {
+                    "type": "integer"
+                }
+            }
+        },
+        "speak.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "pic"
+            ],
+            "properties": {
+                "category_id": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "is_anonymous": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "pic": {
+                    "type": "integer"
+                }
+            }
+        },
         "user.CreateRequest": {
             "type": "object",
             "required": [
@@ -3801,11 +4268,9 @@ const docTemplate = `{
         "volunteer.CreateRequest": {
             "type": "object",
             "required": [
-                "attribute_volunteer_id",
                 "birth_date",
                 "birth_place",
                 "blood_type",
-                "email",
                 "field",
                 "free_times",
                 "indonesian_name",
@@ -3815,7 +4280,6 @@ const docTemplate = `{
                 "level_volunteer_id",
                 "marital_status",
                 "master_area_id",
-                "phone",
                 "postal_code",
                 "profession",
                 "religion_id",
@@ -3825,8 +4289,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "attribute_volunteer_id": {
-                    "type": "integer",
-                    "minimum": 1
+                    "type": "integer"
                 },
                 "birth_date": {
                     "type": "string"
@@ -3844,6 +4307,10 @@ const docTemplate = `{
                         "O"
                     ]
                 },
+                "district": {
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "email": {
                     "type": "string",
                     "maxLength": 100
@@ -3859,6 +4326,13 @@ const docTemplate = `{
                         "$ref": "#/definitions/volunteer.FreeTimeRequest"
                     }
                 },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
                 "home_phone": {
                     "type": "string",
                     "maxLength": 30
@@ -3873,6 +4347,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "ktp_address": {
+                    "type": "string",
+                    "maxLength": 1000
                 },
                 "languages": {
                     "type": "string",
@@ -3990,11 +4468,9 @@ const docTemplate = `{
         "volunteer.UpdateRequest": {
             "type": "object",
             "required": [
-                "attribute_volunteer_id",
                 "birth_date",
                 "birth_place",
                 "blood_type",
-                "email",
                 "field",
                 "free_times",
                 "indonesian_name",
@@ -4004,7 +4480,6 @@ const docTemplate = `{
                 "level_volunteer_id",
                 "marital_status",
                 "master_area_id",
-                "phone",
                 "postal_code",
                 "profession",
                 "religion_id",
@@ -4014,8 +4489,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "attribute_volunteer_id": {
-                    "type": "integer",
-                    "minimum": 1
+                    "type": "integer"
                 },
                 "birth_date": {
                     "type": "string"
@@ -4033,6 +4507,10 @@ const docTemplate = `{
                         "O"
                     ]
                 },
+                "district": {
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "email": {
                     "type": "string",
                     "maxLength": 100
@@ -4048,6 +4526,13 @@ const docTemplate = `{
                         "$ref": "#/definitions/volunteer.FreeTimeRequest"
                     }
                 },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
                 "home_phone": {
                     "type": "string",
                     "maxLength": 30
@@ -4062,6 +4547,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "ktp_address": {
+                    "type": "string",
+                    "maxLength": 1000
                 },
                 "languages": {
                     "type": "string",

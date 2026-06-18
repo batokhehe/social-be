@@ -41,13 +41,22 @@ type resetPasswordEnvelope struct {
 type mockVolunteerRepo struct {
 	validateTokenFn func(ctx context.Context, token string) (*ResetPasswordValidation, error)
 	resetPasswordFn func(ctx context.Context, token, password string) error
+	createFn        func(ctx context.Context, req CreateRequest, actorID int) (*Volunteer, error)
+	updateFn        func(ctx context.Context, id int, req UpdateRequest, actorID int) (*Volunteer, error)
 }
 
 func (m *mockVolunteerRepo) Create(ctx context.Context, req CreateRequest, actorID int) (*Volunteer, error) {
+	if m.createFn != nil {
+		return m.createFn(ctx, req, actorID)
+	}
 	return nil, nil
 }
 
 func (m *mockVolunteerRepo) GetPaginated(ctx context.Context, page pagination.Query) ([]Volunteer, int64, error) {
+	return nil, 0, nil
+}
+
+func (m *mockVolunteerRepo) GetSelect(ctx context.Context) ([]Volunteer, int64, error) {
 	return nil, 0, nil
 }
 
@@ -60,6 +69,9 @@ func (m *mockVolunteerRepo) GetByUserID(ctx context.Context, userID int) (*Volun
 }
 
 func (m *mockVolunteerRepo) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Volunteer, error) {
+	if m.updateFn != nil {
+		return m.updateFn(ctx, id, req, actorID)
+	}
 	return nil, nil
 }
 

@@ -210,7 +210,7 @@ func toAttendanceEntity(item eventAttendanceModel) EventAttendance {
 	attendance.CheckinPhoto = item.CheckinPhoto
 	attendance.CheckoutPhoto = item.CheckoutPhoto
 
-	if item.Volunteer.ID != 0 {
+	if item.Volunteer != nil {
 		attendance.Volunteer = &VolunteerSummary{
 			ID:             item.Volunteer.ID,
 			UserID:         item.Volunteer.UserID,

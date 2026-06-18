@@ -36,7 +36,7 @@ func (s *Service) Register(ctx context.Context, req CreateRequest) error {
 }
 
 func (s *Service) Login(ctx context.Context, email, password string) (string, string, error) {
-	user, hash, role, err := s.Repo.GetByEmail(ctx, email)
+	user, hash, role, err := s.Repo.GetByEmailOrVIS(ctx, email)
 	if err != nil {
 		return "", "", err
 	}
@@ -60,7 +60,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, st
 
 // LoginEx returns accessToken, refreshToken, userID, role, error
 func (s *Service) LoginEx(ctx context.Context, email, password string) (string, string, int, int, error) {
-	user, hash, role, err := s.Repo.GetByEmail(ctx, email)
+	user, hash, role, err := s.Repo.GetByEmailOrVIS(ctx, email)
 	if err != nil {
 		return "", "", 0, 0, err
 	}

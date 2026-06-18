@@ -28,6 +28,7 @@ type CreateRequest struct {
 	MandarinName          string            `json:"mandarin_name" validate:"omitempty,max=100"`
 	BirthPlace            string            `json:"birth_place" validate:"required,max=100"`
 	BirthDate             string            `json:"birth_date" validate:"required"`
+	Gender                string            `json:"gender" validate:"omitempty,oneof=male female"`
 	MasterAreaID          int               `json:"master_area_id" validate:"required,min=1"`
 	LevelVolunteerID      int               `json:"level_volunteer_id" validate:"required,min=1"`
 	AttributeVolunteerID  *int              `json:"attribute_volunteer_id"`
@@ -39,6 +40,8 @@ type CreateRequest struct {
 	Profession            string            `json:"profession" validate:"required,max=100"`
 	Field                 string            `json:"field" validate:"required,max=100"`
 	ResidentialAddress    string            `json:"residential_address" validate:"required,max=255"`
+	KTPAddress            string            `json:"ktp_address" validate:"omitempty,max=1000"`
+	District              string            `json:"district" validate:"omitempty,max=100"`
 	PostalCode            string            `json:"postal_code" validate:"required,max=20"`
 	HomePhone             string            `json:"home_phone" validate:"omitempty,max=30"`
 	OfficePhone           string            `json:"office_phone" validate:"omitempty,max=30"`

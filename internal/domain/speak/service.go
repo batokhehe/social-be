@@ -22,6 +22,24 @@ func (s *Service) GetAll(ctx context.Context, page pagination.Query) ([]Speak, p
 	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
 }
 
+func (s *Service) GetAllAsReporter(ctx context.Context, page pagination.Query, actorID int) ([]Speak, pagination.Meta, error) {
+	items, total, err := s.Repo.GetPaginatedAsReporter(ctx, page, actorID)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+
+	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
+}
+
+func (s *Service) GetAllAsRespondent(ctx context.Context, page pagination.Query, actorID int) ([]Speak, pagination.Meta, error) {
+	items, total, err := s.Repo.GetPaginatedAsRespondent(ctx, page, actorID)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+
+	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
+}
+
 func (s *Service) GetByID(ctx context.Context, id int) (*Speak, error) {
 	return s.Repo.GetByID(ctx, id)
 }

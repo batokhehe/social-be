@@ -16,6 +16,7 @@ type Repository interface {
 	GetAll(ctx context.Context) ([]User, error)
 	GetPaginated(ctx context.Context, page pagination.Query, filters query.Filters) ([]User, int64, error)
 	GetByEmail(ctx context.Context, email string) (*User, string, int, error)
+	GetByEmailOrVIS(ctx context.Context, identifier string) (*User, string, int, error)
 	GetByID(ctx context.Context, id int) (*User, error)
 	UpdateProfilePhoto(ctx context.Context, userID int, profilePhoto string) error
 }
@@ -128,6 +129,22 @@ func (r *GormRepository) GetByEmail(ctx context.Context, email string) (*User, s
 	err := r.DB.WithContext(ctx).Select("id", "name", "email", "password_hash", "role", "status", "profile_photo").
 		Where("email = ? AND deleted_at IS NULL", email).
 		Take(&row).Error
+	if err != nil {
+		return nil, "", 0, err
+	}
+
+	user := toEntity(row)
+	return &user, row.PasswordHash, row.Role, nil
+}
+
+func (r *GormRepository) GetByEmailOrVIS(ctx context.Context, identifier string) (*User, string, int, error) {
+	var row userModel
+
+	err := r.DB.WithContext(ctx).
+		Select("id", "name", "email", "password_hash", "role", "status", "profile_photo").
+		Where("(email = ? OR vis_id = ?) AND deleted_at IS NULL", identifier, identifier).
+		Take(&row).Error
+
 	if err != nil {
 		return nil, "", 0, err
 	}

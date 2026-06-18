@@ -426,9 +426,6 @@ definitions:
     type: object
   masterdonatur.CreateRequest:
     properties:
-      area:
-        maxLength: 100
-        type: string
       id_donatur:
         maxLength: 50
         type: string
@@ -440,6 +437,9 @@ definitions:
       id_vis_volunteer:
         maxLength: 50
         type: string
+      name:
+        maxLength: 100
+        type: string
       status:
         enum:
         - active
@@ -449,15 +449,12 @@ definitions:
         maxLength: 20
         type: string
     required:
-    - area
     - id_donatur
+    - name
     - telepon
     type: object
   masterdonatur.UpdateRequest:
     properties:
-      area:
-        maxLength: 100
-        type: string
       id_donatur:
         maxLength: 50
         type: string
@@ -469,6 +466,9 @@ definitions:
       id_vis_volunteer:
         maxLength: 50
         type: string
+      name:
+        maxLength: 100
+        type: string
       status:
         enum:
         - active
@@ -478,8 +478,8 @@ definitions:
         maxLength: 20
         type: string
     required:
-    - area
     - id_donatur
+    - name
     - telepon
     type: object
   masterdonaturgroup.CreateRequest:
@@ -564,6 +564,55 @@ definitions:
     required:
     - name
     type: object
+  speak.ActionRequest:
+    properties:
+      note:
+        maxLength: 1000
+        type: string
+      type:
+        enum:
+        - progress
+        - finish
+        type: string
+    required:
+    - type
+    type: object
+  speak.CreateRequest:
+    properties:
+      category_id:
+        type: integer
+      description:
+        maxLength: 1000
+        type: string
+      is_anonymous:
+        type: boolean
+      name:
+        maxLength: 255
+        type: string
+      pic:
+        type: integer
+    required:
+    - name
+    - pic
+    type: object
+  speak.UpdateRequest:
+    properties:
+      category_id:
+        type: integer
+      description:
+        maxLength: 1000
+        type: string
+      is_anonymous:
+        type: boolean
+      name:
+        maxLength: 255
+        type: string
+      pic:
+        type: integer
+    required:
+    - name
+    - pic
+    type: object
   user.CreateRequest:
     properties:
       email:
@@ -585,7 +634,6 @@ definitions:
   volunteer.CreateRequest:
     properties:
       attribute_volunteer_id:
-        minimum: 1
         type: integer
       birth_date:
         type: string
@@ -599,6 +647,9 @@ definitions:
         - AB
         - O
         type: string
+      district:
+        maxLength: 100
+        type: string
       email:
         maxLength: 100
         type: string
@@ -610,6 +661,11 @@ definitions:
           $ref: '#/definitions/volunteer.FreeTimeRequest'
         minItems: 1
         type: array
+      gender:
+        enum:
+        - male
+        - female
+        type: string
       home_phone:
         maxLength: 30
         type: string
@@ -621,6 +677,9 @@ definitions:
           type: integer
         minItems: 1
         type: array
+      ktp_address:
+        maxLength: 1000
+        type: string
       languages:
         maxLength: 255
         type: string
@@ -685,11 +744,9 @@ definitions:
         maxLength: 50
         type: string
     required:
-    - attribute_volunteer_id
     - birth_date
     - birth_place
     - blood_type
-    - email
     - field
     - free_times
     - indonesian_name
@@ -699,7 +756,6 @@ definitions:
     - level_volunteer_id
     - marital_status
     - master_area_id
-    - phone
     - postal_code
     - profession
     - religion_id
@@ -732,7 +788,6 @@ definitions:
   volunteer.UpdateRequest:
     properties:
       attribute_volunteer_id:
-        minimum: 1
         type: integer
       birth_date:
         type: string
@@ -746,6 +801,9 @@ definitions:
         - AB
         - O
         type: string
+      district:
+        maxLength: 100
+        type: string
       email:
         maxLength: 100
         type: string
@@ -757,6 +815,11 @@ definitions:
           $ref: '#/definitions/volunteer.FreeTimeRequest'
         minItems: 1
         type: array
+      gender:
+        enum:
+        - male
+        - female
+        type: string
       home_phone:
         maxLength: 30
         type: string
@@ -768,6 +831,9 @@ definitions:
           type: integer
         minItems: 1
         type: array
+      ktp_address:
+        maxLength: 1000
+        type: string
       languages:
         maxLength: 255
         type: string
@@ -832,11 +898,9 @@ definitions:
         maxLength: 50
         type: string
     required:
-    - attribute_volunteer_id
     - birth_date
     - birth_place
     - blood_type
-    - email
     - field
     - free_times
     - indonesian_name
@@ -846,7 +910,6 @@ definitions:
     - level_volunteer_id
     - marital_status
     - master_area_id
-    - phone
     - postal_code
     - profession
     - religion_id
@@ -885,6 +948,118 @@ paths:
       summary: Create user
       tags:
       - users
+  /donations:
+    get:
+      description: Get list of donations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all donations
+      tags:
+      - donation
+    post:
+      consumes:
+      - application/json
+      description: Create new donation
+      parameters:
+      - description: Create donation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/donation.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create donation
+      tags:
+      - donation
+  /donations/{id}:
+    delete:
+      description: Delete donation
+      parameters:
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete donation
+      tags:
+      - donation
+    get:
+      description: Get detail donation
+      parameters:
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get donation by ID
+      tags:
+      - donation
+    put:
+      consumes:
+      - application/json
+      description: Update existing donation
+      parameters:
+      - description: Donation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update donation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/donation.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update donation
+      tags:
+      - donation
   /email/test:
     post:
       consumes:
@@ -1024,6 +1199,31 @@ paths:
       summary: Check out from event
       tags:
       - event
+  /events/{id}/detail:
+    get:
+      description: List events that current volunteer has registered for
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get detail events for volunteer
+      tags:
+      - event
   /events/applied:
     get:
       description: List events that current volunteer has registered for
@@ -1047,6 +1247,31 @@ paths:
       security:
       - BearerAuth: []
       summary: Get applied events for volunteer
+      tags:
+      - event
+  /events/completed:
+    get:
+      description: List events that current volunteer has completed
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get completed events for volunteer
       tags:
       - event
   /login:
@@ -1426,118 +1651,6 @@ paths:
       summary: Update master donation category
       tags:
       - master-donation-category
-  /master/donations:
-    get:
-      description: Get list of donations
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all donations
-      tags:
-      - donation
-    post:
-      consumes:
-      - application/json
-      description: Create new donation
-      parameters:
-      - description: Create donation
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/donation.CreateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create donation
-      tags:
-      - donation
-  /master/donations/{id}:
-    delete:
-      description: Delete donation
-      parameters:
-      - description: Donation ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete donation
-      tags:
-      - donation
-    get:
-      description: Get detail donation
-      parameters:
-      - description: Donation ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get donation by ID
-      tags:
-      - donation
-    put:
-      consumes:
-      - application/json
-      description: Update existing donation
-      parameters:
-      - description: Donation ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Update donation
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/donation.UpdateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update donation
-      tags:
-      - donation
   /master/donatur-groups:
     get:
       description: Get list of master donatur group
@@ -2662,6 +2775,207 @@ paths:
       summary: Register user
       tags:
       - auth
+  /speaks:
+    get:
+      description: Get paginated list of speaks
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all speaks
+      tags:
+      - speaks
+    post:
+      consumes:
+      - application/json
+      description: Create a new speak
+      parameters:
+      - description: Create speak request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/speak.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create speak
+      tags:
+      - speaks
+  /speaks/{id}:
+    delete:
+      description: Soft delete speak
+      parameters:
+      - description: Speak ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete speak
+      tags:
+      - speaks
+    get:
+      description: Get detail speak by ID
+      parameters:
+      - description: Speak ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get speak by ID
+      tags:
+      - speaks
+    put:
+      consumes:
+      - application/json
+      description: Update existing speak
+      parameters:
+      - description: Speak ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update speak request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/speak.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update speak
+      tags:
+      - speaks
+  /speaks/{id}/action:
+    post:
+      consumes:
+      - application/json
+      description: Execute action on speak
+      parameters:
+      - description: Speak ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Action request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/speak.ActionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Perform speak action
+      tags:
+      - speaks
+  /speaks/{id}/attachments:
+    get:
+      description: Get all attachments for a speak
+      parameters:
+      - description: Speak ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get speak attachments
+      tags:
+      - speaks
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload attachment file for a speak
+      parameters:
+      - description: Speak ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Attachment file
+        in: formData
+        name: attachment
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload speak attachment
+      tags:
+      - speaks
   /users:
     get:
       description: Get list of users
@@ -2720,7 +3034,7 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Upload profile photo to NAS and return URL
+      description: Upload profile photo to NAS and update user profile photo
       parameters:
       - description: Profile photo
         in: formData

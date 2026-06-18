@@ -90,6 +90,25 @@ func (h *Handler) GetAll(c *gin.Context) {
 	response.SuccessWithPagination(c, items, meta)
 }
 
+// GetSelect godoc
+// @Summary Get selected volunteer fields
+// @Description Get paginated list of volunteer with selected fields
+// @Tags volunteer
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /master/volunteers/select [get]
+func (h *Handler) GetSelect(c *gin.Context) {
+	items, meta, err := h.Service.GetSelect(c.Request.Context())
+	if err != nil {
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_802", "failed to fetch volunteer"))
+		return
+	}
+	response.SuccessWithPagination(c, items, meta)
+}
+
 func (h *Handler) VerifyResetPassword(c *gin.Context) {
 	var req ResetPasswordVerifyRequest
 	if ok := bindAndValidate(c, &req); !ok {

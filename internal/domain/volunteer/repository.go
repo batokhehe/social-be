@@ -20,6 +20,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, actorID int) (*Volunteer, error)
 	GetPaginated(ctx context.Context, page pagination.Query) ([]Volunteer, int64, error)
+	GetSelect(ctx context.Context) ([]Volunteer, int64, error)
 	GetByID(ctx context.Context, id int) (*Volunteer, error)
 	GetByUserID(ctx context.Context, userID int) (*Volunteer, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Volunteer, error)
@@ -46,6 +47,7 @@ type volunteerModel struct {
 	MandarinName         string     `gorm:"column:mandarin_name"`
 	BirthPlace           string     `gorm:"column:birth_place"`
 	BirthDate            time.Time  `gorm:"column:birth_date"`
+	Gender               *string    `gorm:"column:gender"`
 	MasterAreaID         int        `gorm:"column:master_area_id"`
 	LevelVolunteerID     int        `gorm:"column:level_volunteer_id"`
 	AttributeVolunteerID *int       `gorm:"column:attribute_volunteer_id"`
@@ -57,6 +59,8 @@ type volunteerModel struct {
 	Profession           string     `gorm:"column:profession"`
 	Field                string     `gorm:"column:field"`
 	ResidentialAddress   string     `gorm:"column:residential_address"`
+	KTPAddress           string     `gorm:"column:ktp_address"`
+	District             string     `gorm:"column:district"`
 	PostalCode           string     `gorm:"column:postal_code"`
 	HomePhone            string     `gorm:"column:home_phone"`
 	OfficePhone          string     `gorm:"column:office_phone"`
@@ -78,6 +82,7 @@ type userModel struct {
 	ID           int    `gorm:"column:id"`
 	Name         string `gorm:"column:name"`
 	Email        string `gorm:"column:email"`
+	VISID        string `gorm:"column:vis_id"`
 	PasswordHash string `gorm:"column:password_hash"`
 	Role         int    `gorm:"column:role"`
 	Status       int    `gorm:"column:status"`
@@ -170,6 +175,27 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 	return items, total, nil
 }
 
+func (r *GormRepository) GetSelect(ctx context.Context) ([]Volunteer, int64, error) {
+	var total int64
+	baseQuery := r.DB.WithContext(ctx).Model(&volunteerModel{}).Where("deleted_at IS NULL")
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var rows []volunteerModel
+	if err := baseQuery.Select("id", "vis_id", "indonesian_name").Order("id DESC").Find(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	items := make([]Volunteer, 0, len(rows))
+	for _, row := range rows {
+		item := toEntity(row)
+		if err := r.loadChildren(ctx, &item); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, nil
+}
+
 func (r *GormRepository) GetByID(ctx context.Context, id int) (*Volunteer, error) {
 	var row volunteerModel
 	if err := r.DB.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).Take(&row).Error; err != nil {
@@ -234,11 +260,13 @@ func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, 
 		}
 		result := tx.Model(&volunteerModel{}).Where("id = ? AND deleted_at IS NULL", id).Updates(map[string]any{
 			"vis_id": req.VISID, "indonesian_name": req.IndonesianName, "mandarin_name": req.MandarinName,
-			"birth_place": updates.BirthPlace, "birth_date": updates.BirthDate, "master_area_id": req.MasterAreaID,
+			"birth_place": updates.BirthPlace, "birth_date": updates.BirthDate, "gender": updates.Gender,
+			"master_area_id":     req.MasterAreaID,
 			"level_volunteer_id": req.LevelVolunteerID, "attribute_volunteer_id": req.AttributeVolunteerID,
 			"religion_id": req.ReligionID, "blood_type": req.BloodType, "rhesus": req.Rhesus,
 			"last_education": req.LastEducation, "marital_status": req.MaritalStatus, "profession": req.Profession,
-			"field": req.Field, "residential_address": req.ResidentialAddress, "postal_code": req.PostalCode,
+			"field": req.Field, "residential_address": req.ResidentialAddress,
+			"ktp_address": req.KTPAddress, "district": req.District, "postal_code": req.PostalCode,
 			"home_phone": req.HomePhone, "office_phone": req.OfficePhone, "phone": req.Phone, "email": req.Email,
 			"languages": req.Languages, "private_vehicle": req.PrivateVehicle, "regular_donor": req.RegularDonor,
 			"updated_by": actorID, "updated_at": time.Now(),
@@ -277,14 +305,32 @@ func buildModel(req CreateRequest, actorID int) (volunteerModel, error) {
 	}
 	return volunteerModel{
 		VISID: req.VISID, IndonesianName: req.IndonesianName, MandarinName: req.MandarinName,
-		BirthPlace: req.BirthPlace, BirthDate: birthDate, MasterAreaID: req.MasterAreaID,
+		BirthPlace: req.BirthPlace, BirthDate: birthDate, Gender: genderColumn(req.Gender), MasterAreaID: req.MasterAreaID,
 		LevelVolunteerID: req.LevelVolunteerID, AttributeVolunteerID: req.AttributeVolunteerID, ReligionID: req.ReligionID,
 		BloodType: req.BloodType, Rhesus: req.Rhesus, LastEducation: req.LastEducation, MaritalStatus: req.MaritalStatus,
-		Profession: req.Profession, Field: req.Field, ResidentialAddress: req.ResidentialAddress, PostalCode: req.PostalCode,
+		Profession: req.Profession, Field: req.Field, ResidentialAddress: req.ResidentialAddress,
+		KTPAddress: req.KTPAddress, District: req.District, PostalCode: req.PostalCode,
 		HomePhone: req.HomePhone, OfficePhone: req.OfficePhone, Phone: req.Phone, Email: req.Email,
 		Languages: req.Languages, PrivateVehicle: req.PrivateVehicle, RegularDonor: req.RegularDonor,
 		Status: "active", CreatedBy: &actorID, UpdatedBy: &actorID,
 	}, nil
+}
+
+// genderColumn maps an optional gender string to a nullable column value so an
+// empty/omitted gender is persisted as NULL (satisfying the chk_volunteers_gender
+// CHECK constraint) rather than an empty string.
+func genderColumn(gender string) *string {
+	if gender == "" {
+		return nil
+	}
+	return &gender
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func createVolunteerUserAndResetToken(tx *gorm.DB, req CreateRequest, actorID int) (int, string, error) {
@@ -296,6 +342,7 @@ func createVolunteerUserAndResetToken(tx *gorm.DB, req CreateRequest, actorID in
 	user := userModel{
 		Name:         req.IndonesianName,
 		Email:        req.Email,
+		VISID:        req.VISID,
 		PasswordHash: passwordHash,
 		Role:         2,
 		Status:       1,
@@ -391,10 +438,11 @@ func (r *GormRepository) loadChildren(ctx context.Context, item *Volunteer) erro
 func toEntity(row volunteerModel) Volunteer {
 	return Volunteer{
 		ID: row.ID, UserID: row.UserID, TzuhiAppID: row.TzuhiAppID, VISID: row.VISID, IndonesianName: row.IndonesianName, MandarinName: row.MandarinName,
-		BirthPlace: row.BirthPlace, BirthDate: row.BirthDate.Format("2006-01-02"), MasterAreaID: row.MasterAreaID,
+		BirthPlace: row.BirthPlace, BirthDate: row.BirthDate.Format("2006-01-02"), Gender: derefString(row.Gender), MasterAreaID: row.MasterAreaID,
 		LevelVolunteerID: row.LevelVolunteerID, AttributeVolunteerID: row.AttributeVolunteerID, ReligionID: row.ReligionID,
 		BloodType: row.BloodType, Rhesus: row.Rhesus, LastEducation: row.LastEducation, MaritalStatus: row.MaritalStatus,
-		Profession: row.Profession, Field: row.Field, ResidentialAddress: row.ResidentialAddress, PostalCode: row.PostalCode,
+		Profession: row.Profession, Field: row.Field, ResidentialAddress: row.ResidentialAddress,
+		KTPAddress: row.KTPAddress, District: row.District, PostalCode: row.PostalCode,
 		HomePhone: row.HomePhone, OfficePhone: row.OfficePhone, Phone: row.Phone, Email: row.Email, Languages: row.Languages,
 		PrivateVehicle: row.PrivateVehicle, RegularDonor: row.RegularDonor, Status: row.Status,
 		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, DeletedBy: row.DeletedBy,

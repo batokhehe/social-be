@@ -102,6 +102,67 @@ func (h *Handler) GetAll(c *gin.Context) {
 	response.SuccessWithPagination(c, items, meta)
 }
 
+// GetAllAsReporter godoc
+// @Summary Get all as Reporter speaks
+// @Description Get paginated list of speaks as Reporter
+// @Tags speaks
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/reporter [get]
+func (h *Handler) GetAllAsReporter(c *gin.Context) {
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+	items, meta, err := h.Service.GetAllAsReporter(c.Request.Context(), page, actor)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch speaks")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_1101", "failed to fetch speaks"))
+		return
+	}
+
+	response.SuccessWithPagination(c, items, meta)
+}
+
+// GetAllAsRespondent godoc
+// @Summary Get all as Respondent speaks
+// @Description Get paginated list of speaks as Respondent
+// @Tags speaks
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/respondent [get]
+func (h *Handler) GetAllAsRespondent(c *gin.Context) {
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+
+	items, meta, err := h.Service.GetAllAsRespondent(c.Request.Context(), page, actor)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch speaks")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_1101", "failed to fetch speaks"))
+		return
+	}
+
+	response.SuccessWithPagination(c, items, meta)
+}
+
 // GetByID godoc
 // @Summary Get speak by ID
 // @Description Get detail speak by ID

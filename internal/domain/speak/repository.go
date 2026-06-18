@@ -15,6 +15,8 @@ import (
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, actorID int) (*Speak, error)
 	GetPaginated(ctx context.Context, page pagination.Query) ([]Speak, int64, error)
+	GetPaginatedAsReporter(ctx context.Context, page pagination.Query, actorID int) ([]Speak, int64, error)
+	GetPaginatedAsRespondent(ctx context.Context, page pagination.Query, actorID int) ([]Speak, int64, error)
 	GetByID(ctx context.Context, id int) (*Speak, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Speak, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
@@ -63,6 +65,50 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 	var rows []speakModel
 	if err := baseQuery.Order("id DESC").Limit(page.Limit).Offset(page.Offset).Find(&rows).Error; err != nil {
 		r.Logger.WithError(err).Error("GetPaginated Speak failed")
+		return nil, 0, fmt.Errorf("failed get paginated speaks: %w", err)
+	}
+
+	items := make([]Speak, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, toEntity(row))
+	}
+
+	return items, total, nil
+}
+
+func (r *GormRepository) GetPaginatedAsReporter(ctx context.Context, page pagination.Query, actorID int) ([]Speak, int64, error) {
+	var total int64
+	baseQuery := r.DB.WithContext(ctx).Model(&speakModel{}).Where("deleted_at IS NULL AND created_by = ?", actorID)
+	if err := baseQuery.Count(&total).Error; err != nil {
+		r.Logger.WithError(err).Error("Count Speak failed")
+		return nil, 0, fmt.Errorf("failed count speaks: %w", err)
+	}
+
+	var rows []speakModel
+	if err := baseQuery.Order("id DESC").Limit(page.Limit).Offset(page.Offset).Find(&rows).Error; err != nil {
+		r.Logger.WithError(err).Error("GetPaginatedAsReporter Speak failed")
+		return nil, 0, fmt.Errorf("failed get paginated speaks: %w", err)
+	}
+
+	items := make([]Speak, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, toEntity(row))
+	}
+
+	return items, total, nil
+}
+
+func (r *GormRepository) GetPaginatedAsRespondent(ctx context.Context, page pagination.Query, actorID int) ([]Speak, int64, error) {
+	var total int64
+	baseQuery := r.DB.WithContext(ctx).Model(&speakModel{}).Where("deleted_at IS NULL AND pic_user_id = ?", actorID)
+	if err := baseQuery.Count(&total).Error; err != nil {
+		r.Logger.WithError(err).Error("Count Speak failed")
+		return nil, 0, fmt.Errorf("failed count speaks: %w", err)
+	}
+
+	var rows []speakModel
+	if err := baseQuery.Order("id DESC").Limit(page.Limit).Offset(page.Offset).Find(&rows).Error; err != nil {
+		r.Logger.WithError(err).Error("GetPaginatedAsReporter Speak failed")
 		return nil, 0, fmt.Errorf("failed get paginated speaks: %w", err)
 	}
 

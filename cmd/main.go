@@ -101,7 +101,9 @@ func main() {
 	speakRepo := speak.NewGormRepository(db, logger.Log)
 	donationRepo := donation.NewGormRepository(db)
 	donationService := donation.NewService(donationRepo)
-	donationHandler := donation.NewHandler(donationService)
+	donationImportService := donation.NewImportService(donationRepo)
+	donationHistoryService := donation.NewImportHistoryService(donationRepo)
+	donationHandler := donation.NewHandler(donationService, donationImportService, donationHistoryService)
 
 	emailService := email.NewService()
 	userService := &user.Service{Repo: userRepo}
@@ -142,19 +144,12 @@ func main() {
 	// gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
-	r.Use(otelgin.Middleware("social-be"))
-	r.Use(middleware.TimeoutMiddleware(15 * time.Second))
-	r.Use(middleware.RequestIDMiddleware())
-	r.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
-		logger.FromContext(c.Request.Context()).WithField("panic", recovered).Error("panic recovered")
-		response.WriteError(c, apperror.New(http.StatusInternalServerError, apperror.CodeInternal, "internal server error"))
-		c.Abort()
-	}))
-	r.Use(middleware.LoggerMiddleware())
-	r.Use(middleware.ErrorMiddleware())
-	r.Use(middleware.MetricsMiddleware())
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
+		AllowOrigins: []string{
+			"http://tzuchi.gistexgroup.com:8282",
+			"http://localhost:5173",
+			"https://localhost:5173",
+		},
 		AllowMethods: []string{
 			"GET",
 			"POST",
@@ -168,12 +163,21 @@ func main() {
 			"Accept",
 			"Authorization",
 		},
-		ExposeHeaders: []string{
-			"Content-Length",
-		},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	r.Use(otelgin.Middleware("social-be"))
+	r.Use(middleware.TimeoutMiddleware(15 * time.Second))
+	r.Use(middleware.RequestIDMiddleware())
+	r.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
+		logger.FromContext(c.Request.Context()).WithField("panic", recovered).Error("panic recovered")
+		response.WriteError(c, apperror.New(http.StatusInternalServerError, apperror.CodeInternal, "internal server error"))
+		c.Abort()
+	}))
+	r.Use(middleware.LoggerMiddleware())
+	r.Use(middleware.ErrorMiddleware())
+	r.Use(middleware.MetricsMiddleware())
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -238,14 +242,12 @@ func main() {
 </body>
 </html>`)
 	})
-
-	r.GET("/health/live", middleware.LivenessHandler)
-	r.GET("/health/ready", middleware.ReadinessHandler)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	api := r.Group("/api")
-
 	api.Use(middleware.RateLimitMiddleware())
+	api.GET("/health/live", middleware.LivenessHandler)
+	api.GET("/health/ready", middleware.ReadinessHandler)
 
 	v1 := api.Group("/v1")
 	v1.POST("/register", authHandler.Register)
@@ -266,6 +268,7 @@ func main() {
 	master := protected.Group("/master")
 	// master.Use(middleware.RoleMiddleware(0, 1))
 	master.GET("/volunteers", volunteerHandler.GetAll)
+	master.GET("/volunteers/select", volunteerHandler.GetSelect)
 	master.GET("/volunteers/:id", volunteerHandler.GetByID)
 	master.POST("/volunteers", volunteerHandler.Create)
 	master.PUT("/volunteers/:id", volunteerHandler.Update)
@@ -321,15 +324,6 @@ func main() {
 	master.PUT("/master-activities/:id", masterActivityHandler.Update)
 	master.DELETE("/master-activities/:id", masterActivityHandler.Delete)
 
-	master.GET("/speaks", speakHandler.GetAll)
-	master.GET("/speaks/:id", speakHandler.GetByID)
-	master.POST("/speaks", speakHandler.Create)
-	master.PUT("/speaks/:id", speakHandler.Update)
-	master.DELETE("/speaks/:id", speakHandler.Delete)
-	master.POST("/speaks/:id/attachments", speakHandler.CreateAttachment)
-	master.GET("/speaks/:id/attachments", speakHandler.GetAttachments)
-	master.POST("/speaks/:id/action", speakHandler.Action)
-
 	masterEvents := master.Group("/events")
 	// masterEvents.Use(middleware.RoleMiddleware(0, 1, 2))
 	masterEvents.POST("", eventHandler.Create)
@@ -355,16 +349,39 @@ func main() {
 	donations.GET("", donationHandler.GetAll)
 	donations.GET(":id", donationHandler.GetByID)
 	donations.POST("", donationHandler.Create)
+	// Bulk import, rollback and import history/audit are privileged operations:
+	// SuperAdmin/Admin only (volunteers are blocked).
+	adminOnly := middleware.RoleMiddleware(user.RoleSuperAdmin, user.RoleAdmin)
+	donations.POST("import", adminOnly, donationHandler.Import)
+	donations.DELETE("import/:batch_id", adminOnly, donationHandler.Rollback)
+	donations.GET("imports", adminOnly, donationHandler.ListImports)
+	donations.GET("imports/:batch_id", adminOnly, donationHandler.GetImportDetail)
+	donations.GET("imports/:batch_id/errors", adminOnly, donationHandler.GetImportErrors)
+	donations.GET("imports/:batch_id/errors/export", adminOnly, donationHandler.ExportImportErrors)
+	donations.GET("imports/:batch_id/donations", adminOnly, donationHandler.GetImportDonations)
+	donations.GET("imports/:batch_id/rollback", adminOnly, donationHandler.GetImportRollback)
 	donations.PUT(":id", donationHandler.Update)
 	donations.DELETE(":id", donationHandler.Delete)
+
+	speaks := protected.Group("/speaks")
+	speaks.GET("", speakHandler.GetAll)
+	speaks.GET("/reporter", speakHandler.GetAllAsReporter)
+	speaks.GET("/respondent", speakHandler.GetAllAsRespondent)
+	speaks.GET("/:id", speakHandler.GetByID)
+	speaks.POST("", speakHandler.Create)
+	speaks.PUT("/:id", speakHandler.Update)
+	speaks.DELETE("/:id", speakHandler.Delete)
+	speaks.POST("/:id/attachments", speakHandler.CreateAttachment)
+	speaks.GET("/speaks/:id/attachments", speakHandler.GetAttachments)
+	speaks.POST("/speaks/:id/action", speakHandler.Action)
 
 	admin := protected.Group("/admin")
 	// admin.Use(middleware.RoleMiddleware(0, 1))
 	admin.GET("/users", userHandler.GetUsers)
 	admin.POST("/users", middleware.RoleMiddleware(0), userHandler.CreateUser)
 
-	log.Println("Server running at :8080")
-	if err := r.Run(":8080"); err != nil {
+	log.Println("Server running at :8283")
+	if err := r.Run(":8283"); err != nil {
 		log.Fatal(err)
 	}
 }
