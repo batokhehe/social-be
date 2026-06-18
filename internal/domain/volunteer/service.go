@@ -12,12 +12,16 @@ func (s *Service) Create(ctx context.Context, req CreateRequest, actorID int) (*
 	return s.Repo.Create(ctx, req, actorID)
 }
 
-func (s *Service) GetPaginated(ctx context.Context, page pagination.Query) ([]Volunteer, pagination.Meta, error) {
-	items, total, err := s.Repo.GetPaginated(ctx, page)
+func (s *Service) GetPaginated(ctx context.Context, page pagination.Query, district string, search string) ([]Volunteer, pagination.Meta, error) {
+	items, total, err := s.Repo.GetPaginated(ctx, page, district, search)
 	if err != nil {
 		return nil, pagination.Meta{}, err
 	}
 	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
+}
+
+func (s *Service) GetDistricts(ctx context.Context) ([]string, error) {
+	return s.Repo.GetDistinctDistricts(ctx)
 }
 
 func (s *Service) GetSelect(ctx context.Context) ([]Volunteer, pagination.Meta, error) {

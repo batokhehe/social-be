@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, donation *Donation) (*Donation, error)
-	GetAll(ctx context.Context) ([]Donation, error)
+	GetAll(ctx context.Context, donationType *int) ([]Donation, error)
 	GetByID(ctx context.Context, id int) (*Donation, error)
 	Update(ctx context.Context, donation *Donation) (*Donation, error)
 	Delete(ctx context.Context, id int) error
@@ -89,14 +90,16 @@ type DonaturRef struct {
 // ImportedDonation is the insert payload for an Excel-imported donation. Group
 // and area are pointers so they can be stored as NULL.
 type ImportedDonation struct {
-	DonaturID          int     `gorm:"column:donatur_id"`
-	DonaturGroupID     *int    `gorm:"column:donatur_group_id"`
-	AreaID             *int    `gorm:"column:area_id"`
-	DonationCategoryID int     `gorm:"column:donation_category_id"`
-	Currency           string  `gorm:"column:currency"`
-	Amount             float64 `gorm:"column:amount"`
-	OtherItems         string  `gorm:"column:other_items"`
-	ImportBatchID      string  `gorm:"column:import_batch_id"`
+	DonaturID          int        `gorm:"column:donatur_id"`
+	DonaturGroupID     *int       `gorm:"column:donatur_group_id"`
+	AreaID             *int       `gorm:"column:area_id"`
+	DonationCategoryID int        `gorm:"column:donation_category_id"`
+	Type               int        `gorm:"column:type"`
+	Period             *time.Time `gorm:"column:period"`
+	Currency           string     `gorm:"column:currency"`
+	Amount             float64    `gorm:"column:amount"`
+	OtherItems         string     `gorm:"column:other_items"`
+	ImportBatchID      string     `gorm:"column:import_batch_id"`
 }
 
 func (ImportedDonation) TableName() string { return "donations" }
@@ -116,20 +119,218 @@ func (r *GormRepository) Create(ctx context.Context, donation *Donation) (*Donat
 	return donation, nil
 }
 
-func (r *GormRepository) GetAll(ctx context.Context) ([]Donation, error) {
+func (r *GormRepository) GetAll(ctx context.Context, donationType *int) ([]Donation, error) {
 	var donations []Donation
-	if err := r.DB.WithContext(ctx).Order("id ASC").Find(&donations).Error; err != nil {
+	q := r.DB.WithContext(ctx).Order("id ASC")
+	if donationType != nil {
+		q = q.Where("type = ?", *donationType)
+	}
+	if err := q.Find(&donations).Error; err != nil {
+		return nil, err
+	}
+	if err := r.loadDonaturRefs(ctx, donations); err != nil {
 		return nil, err
 	}
 	return donations, nil
 }
 
+// loadDonaturRefs resolves the donatur (donatur_id -> master_donaturs.id) and
+// donatur group (donatur_group_id -> master_donatur_groups.id) for each
+// donation, in one batched query per side. Missing/soft-deleted references are
+// left nil.
+func (r *GormRepository) loadDonaturRefs(ctx context.Context, items []Donation) error {
+	donaturIDSet := make(map[int]struct{})
+	donaturIDs := make([]int, 0, len(items))
+	groupIDSet := make(map[int]struct{})
+	groupIDs := make([]int, 0, len(items))
+
+	for _, item := range items {
+		if item.DonaturID > 0 {
+			if _, ok := donaturIDSet[item.DonaturID]; !ok {
+				donaturIDSet[item.DonaturID] = struct{}{}
+				donaturIDs = append(donaturIDs, item.DonaturID)
+			}
+		}
+		if item.DonaturGroupID != nil && *item.DonaturGroupID > 0 {
+			if _, ok := groupIDSet[*item.DonaturGroupID]; !ok {
+				groupIDSet[*item.DonaturGroupID] = struct{}{}
+				groupIDs = append(groupIDs, *item.DonaturGroupID)
+			}
+		}
+	}
+
+	byDonaturID := make(map[int]DonaturInfo)
+	donaturVolPK := make(map[int]int) // donatur.id -> volunteer pk (parsed from id_vis_volunteer)
+	volIDSet := make(map[int]struct{})
+	volIDs := make([]int, 0)
+	if len(donaturIDs) > 0 {
+		var rows []struct {
+			ID             int    `gorm:"column:id"`
+			DonaturID      string `gorm:"column:id_donatur"`
+			Name           string `gorm:"column:name"`
+			Phone          string `gorm:"column:telepon"`
+			Status         string `gorm:"column:status"`
+			VisVolunteerID string `gorm:"column:id_vis_volunteer"`
+		}
+		if err := r.DB.WithContext(ctx).
+			Table("master_donaturs").
+			Select("id", "id_donatur", "name", "telepon", "status", "id_vis_volunteer").
+			Where("id IN ? AND deleted_at IS NULL", donaturIDs).
+			Find(&rows).Error; err != nil {
+			return fmt.Errorf("failed to load donaturs: %w", err)
+		}
+		for _, row := range rows {
+			byDonaturID[row.ID] = DonaturInfo{
+				ID:             row.ID,
+				DonaturID:      row.DonaturID,
+				Name:           row.Name,
+				Phone:          row.Phone,
+				Status:         row.Status,
+				VisVolunteerID: row.VisVolunteerID,
+			}
+			if volPK, err := strconv.Atoi(strings.TrimSpace(row.VisVolunteerID)); err == nil && volPK > 0 {
+				donaturVolPK[row.ID] = volPK
+				if _, ok := volIDSet[volPK]; !ok {
+					volIDSet[volPK] = struct{}{}
+					volIDs = append(volIDs, volPK)
+				}
+			}
+		}
+	}
+
+	// Resolve the volunteer behind each donor, and the volunteer's area.
+	byVolID, err := r.loadDonaturVolunteers(ctx, volIDs)
+	if err != nil {
+		return err
+	}
+	for donaturID, volPK := range donaturVolPK {
+		vol, ok := byVolID[volPK]
+		if !ok {
+			continue
+		}
+		info := byDonaturID[donaturID]
+		v := vol
+		info.Volunteer = &v
+		byDonaturID[donaturID] = info
+	}
+
+	byGroupID := make(map[int]DonaturGroupInfo)
+	if len(groupIDs) > 0 {
+		var rows []struct {
+			ID      int    `gorm:"column:id"`
+			GroupID string `gorm:"column:id_group_donatur"`
+			Name    string `gorm:"column:name"`
+			Status  string `gorm:"column:status"`
+		}
+		if err := r.DB.WithContext(ctx).
+			Table("master_donatur_groups").
+			Select("id", "id_group_donatur", "name", "status").
+			Where("id IN ? AND deleted_at IS NULL", groupIDs).
+			Find(&rows).Error; err != nil {
+			return fmt.Errorf("failed to load donatur groups: %w", err)
+		}
+		for _, row := range rows {
+			byGroupID[row.ID] = DonaturGroupInfo{
+				ID:      row.ID,
+				GroupID: row.GroupID,
+				Name:    row.Name,
+				Status:  row.Status,
+			}
+		}
+	}
+
+	for i := range items {
+		if d, ok := byDonaturID[items[i].DonaturID]; ok {
+			ref := d
+			items[i].Donatur = &ref
+		}
+		if items[i].DonaturGroupID != nil {
+			if g, ok := byGroupID[*items[i].DonaturGroupID]; ok {
+				ref := g
+				items[i].DonaturGroup = &ref
+			}
+		}
+	}
+	return nil
+}
+
+// loadDonaturVolunteers resolves the given volunteer PKs and their master areas,
+// returning a map keyed by volunteer id with the area nested.
+func (r *GormRepository) loadDonaturVolunteers(ctx context.Context, volIDs []int) (map[int]DonaturVolunteer, error) {
+	out := make(map[int]DonaturVolunteer)
+	if len(volIDs) == 0 {
+		return out, nil
+	}
+
+	var volRows []struct {
+		ID             int    `gorm:"column:id"`
+		VISID          string `gorm:"column:vis_id"`
+		IndonesianName string `gorm:"column:indonesian_name"`
+		MasterAreaID   int    `gorm:"column:master_area_id"`
+	}
+	if err := r.DB.WithContext(ctx).
+		Table("volunteers").
+		Select("id", "vis_id", "indonesian_name", "master_area_id").
+		Where("id IN ? AND deleted_at IS NULL", volIDs).
+		Find(&volRows).Error; err != nil {
+		return nil, fmt.Errorf("failed to load donatur volunteers: %w", err)
+	}
+
+	areaIDSet := make(map[int]struct{})
+	areaIDs := make([]int, 0, len(volRows))
+	for _, vr := range volRows {
+		if vr.MasterAreaID > 0 {
+			if _, ok := areaIDSet[vr.MasterAreaID]; !ok {
+				areaIDSet[vr.MasterAreaID] = struct{}{}
+				areaIDs = append(areaIDs, vr.MasterAreaID)
+			}
+		}
+	}
+
+	byAreaID := make(map[int]DonaturMasterArea)
+	if len(areaIDs) > 0 {
+		var areaRows []struct {
+			ID       int    `gorm:"column:id"`
+			Name     string `gorm:"column:name"`
+			Location string `gorm:"column:location"`
+		}
+		if err := r.DB.WithContext(ctx).
+			Table("master_areas").
+			Select("id", "name", "location").
+			Where("id IN ? AND deleted_at IS NULL", areaIDs).
+			Find(&areaRows).Error; err != nil {
+			return nil, fmt.Errorf("failed to load master areas: %w", err)
+		}
+		for _, ar := range areaRows {
+			byAreaID[ar.ID] = DonaturMasterArea{ID: ar.ID, Name: ar.Name, Location: ar.Location}
+		}
+	}
+
+	for _, vr := range volRows {
+		vol := DonaturVolunteer{
+			ID:             vr.ID,
+			VISID:          vr.VISID,
+			IndonesianName: vr.IndonesianName,
+			MasterAreaID:   vr.MasterAreaID,
+		}
+		if area, ok := byAreaID[vr.MasterAreaID]; ok {
+			a := area
+			vol.MasterArea = &a
+		}
+		out[vr.ID] = vol
+	}
+	return out, nil
+}
+
 func (r *GormRepository) GetByID(ctx context.Context, id int) (*Donation, error) {
-	var donation Donation
-	if err := r.DB.WithContext(ctx).First(&donation, id).Error; err != nil {
+	items := make([]Donation, 1)
+	if err := r.DB.WithContext(ctx).First(&items[0], id).Error; err != nil {
 		return nil, err
 	}
-	return &donation, nil
+	if err := r.loadDonaturRefs(ctx, items); err != nil {
+		return nil, err
+	}
+	return &items[0], nil
 }
 
 func (r *GormRepository) Update(ctx context.Context, donation *Donation) (*Donation, error) {
@@ -254,6 +455,12 @@ func (r *GormRepository) PersistImportLocked(ctx context.Context, lockKey int64,
 			toInsert = append(toInsert, c.Donation)
 		}
 
+		log.SuccessRows = len(toInsert)
+		log.SkippedRows = len(skipped)
+		if err := tx.Create(log).Error; err != nil {
+			return err
+		}
+
 		if len(toInsert) > 0 {
 			if err := tx.CreateInBatches(&toInsert, importInsertBatchSize).Error; err != nil {
 				return err
@@ -266,14 +473,9 @@ func (r *GormRepository) PersistImportLocked(ctx context.Context, lockKey int64,
 			}
 		}
 
-		log.SuccessRows = len(toInsert)
-		log.SkippedRows = len(skipped)
-		if err := tx.Create(log).Error; err != nil {
-			return err
-		}
-
 		outcome = PersistOutcome{Inserted: len(toInsert), Skipped: skipped}
 		return nil
+
 	})
 	if err != nil {
 		return PersistOutcome{}, err

@@ -4052,7 +4052,7 @@
             "required": [
                 "id_group_donatur",
                 "name",
-                "pic_name",
+                "volunteer_id",
                 "pic_phone"
             ],
             "properties": {
@@ -4064,7 +4064,7 @@
                     "type": "string",
                     "maxLength": 100
                 },
-                "pic_name": {
+                "volunteer_id": {
                     "type": "string",
                     "maxLength": 100
                 },
@@ -4086,7 +4086,7 @@
             "required": [
                 "id_group_donatur",
                 "name",
-                "pic_name",
+                "volunteer_id",
                 "pic_phone"
             ],
             "properties": {
@@ -4098,7 +4098,7 @@
                     "type": "string",
                     "maxLength": 100
                 },
-                "pic_name": {
+                "volunteer_id": {
                     "type": "string",
                     "maxLength": 100
                 },

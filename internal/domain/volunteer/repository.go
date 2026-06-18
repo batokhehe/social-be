@@ -19,8 +19,9 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, req CreateRequest, actorID int) (*Volunteer, error)
-	GetPaginated(ctx context.Context, page pagination.Query) ([]Volunteer, int64, error)
+	GetPaginated(ctx context.Context, page pagination.Query, district string, search string) ([]Volunteer, int64, error)
 	GetSelect(ctx context.Context) ([]Volunteer, int64, error)
+	GetDistinctDistricts(ctx context.Context) ([]string, error)
 	GetByID(ctx context.Context, id int) (*Volunteer, error)
 	GetByUserID(ctx context.Context, userID int) (*Volunteer, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Volunteer, error)
@@ -154,9 +155,16 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 	return r.GetByID(ctx, id)
 }
 
-func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query) ([]Volunteer, int64, error) {
+func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query, district string, search string) ([]Volunteer, int64, error) {
 	var total int64
 	baseQuery := r.DB.WithContext(ctx).Model(&volunteerModel{}).Where("deleted_at IS NULL")
+	if district != "" {
+		baseQuery = baseQuery.Where("district = ?", district)
+	}
+	if search != "" {
+		like := "%" + search + "%"
+		baseQuery = baseQuery.Where("(indonesian_name ILIKE ? OR vis_id ILIKE ?)", like, like)
+	}
 	if err := baseQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -194,6 +202,19 @@ func (r *GormRepository) GetSelect(ctx context.Context) ([]Volunteer, int64, err
 		items = append(items, item)
 	}
 	return items, total, nil
+}
+
+func (r *GormRepository) GetDistinctDistricts(ctx context.Context) ([]string, error) {
+	var districts []string
+	if err := r.DB.WithContext(ctx).
+		Model(&volunteerModel{}).
+		Where("deleted_at IS NULL AND district IS NOT NULL AND district <> ''").
+		Distinct().
+		Order("district ASC").
+		Pluck("district", &districts).Error; err != nil {
+		return nil, err
+	}
+	return districts, nil
 }
 
 func (r *GormRepository) GetByID(ctx context.Context, id int) (*Volunteer, error) {

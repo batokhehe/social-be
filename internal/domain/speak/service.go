@@ -56,10 +56,14 @@ func (s *Service) Action(ctx context.Context, id int, req ActionRequest, actorID
 	return s.Repo.Action(ctx, id, req, actorID)
 }
 
-func (s *Service) AddAttachment(ctx context.Context, speakID int, filePath string, originalName string, actorID int) (*SpeakAttachment, error) {
-	return s.Repo.AddAttachment(ctx, speakID, filePath, originalName, actorID)
+func (s *Service) AddAttachment(ctx context.Context, speakID int, filePath string, originalName string, actorID int, attachmentType int) (*SpeakAttachment, error) {
+	return s.Repo.AddAttachment(ctx, speakID, filePath, originalName, actorID, attachmentType)
 }
 
-func (s *Service) GetAttachments(ctx context.Context, speakID int) ([]SpeakAttachment, error) {
-	return s.Repo.GetAttachments(ctx, speakID)
+func (s *Service) GetAttachments(ctx context.Context, speakID int, attachmentType int) ([]SpeakAttachment, error) {
+	return s.Repo.GetAttachments(ctx, speakID, attachmentType)
+}
+
+func (s *Service) SoftDeleteAttachment(ctx context.Context, speakID int, attachmentID int, actorID int) error {
+	return s.Repo.SoftDeleteAttachment(ctx, speakID, attachmentID, actorID)
 }

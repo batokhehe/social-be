@@ -1,6 +1,7 @@
 package speak
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -12,6 +13,7 @@ import (
 	"social-be/internal/pkg/validation"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -299,13 +301,20 @@ func (h *Handler) Action(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "Speak ID"
+// @Param type path int true "Attachment type: 0 = reporter, 1 = respondent"
 // @Param attachment formData file true "Attachment file"
 // @Success 200 {object} map[string]interface{}
-// @Router /speaks/{id}/attachments [post]
+// @Router /speaks/{id}/attachments/{type} [post]
 func (h *Handler) CreateAttachment(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid id"))
+		return
+	}
+
+	attachmentType, err := strconv.Atoi(c.Param("type"))
+	if err != nil || (attachmentType != AttachmentTypeReporter && attachmentType != AttachmentTypeRespondent) {
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid type: must be 0 (reporter) or 1 (respondent)"))
 		return
 	}
 
@@ -327,7 +336,7 @@ func (h *Handler) CreateAttachment(c *gin.Context) {
 		return
 	}
 
-	item, err := h.Service.AddAttachment(c.Request.Context(), id, filePath, file.Filename, actor)
+	item, err := h.Service.AddAttachment(c.Request.Context(), id, filePath, file.Filename, actor, attachmentType)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_1106", "failed to add speak attachment"))
 		return
@@ -352,11 +361,57 @@ func (h *Handler) GetAttachments(c *gin.Context) {
 		return
 	}
 
-	items, err := h.Service.GetAttachments(c.Request.Context(), id)
+	attachmentType, err := strconv.Atoi(c.Param("type"))
+	if err != nil {
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid type"))
+		return
+	}
+
+	items, err := h.Service.GetAttachments(c.Request.Context(), id, attachmentType)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_1107", "failed to fetch speak attachments"))
 		return
 	}
 
 	response.Success(c, items)
+}
+
+// DeleteAttachment godoc
+// @Summary Delete speak attachment
+// @Description Soft delete an attachment of a speak
+// @Tags speaks
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Speak ID"
+// @Param attachmentId path int true "Attachment ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /speaks/{id}/attachments/{attachmentId} [delete]
+func (h *Handler) DeleteAttachment(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid id"))
+		return
+	}
+
+	attachmentID, err := strconv.Atoi(c.Param("attachmentId"))
+	if err != nil {
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid attachment id"))
+		return
+	}
+
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+
+	if err := h.Service.SoftDeleteAttachment(c.Request.Context(), id, attachmentID, actor); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.AbortError(c, apperror.New(http.StatusNotFound, "DB_1108", "speak attachment not found"))
+			return
+		}
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_1108", "failed to delete speak attachment"))
+		return
+	}
+
+	response.Success(c, gin.H{"message": "speak attachment deleted"})
 }

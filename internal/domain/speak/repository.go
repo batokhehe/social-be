@@ -21,8 +21,9 @@ type Repository interface {
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Speak, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
 	Action(ctx context.Context, id int, req ActionRequest, actorID int) (*Speak, error)
-	AddAttachment(ctx context.Context, speakID int, filePath string, originalName string, actorID int) (*SpeakAttachment, error)
-	GetAttachments(ctx context.Context, speakID int) ([]SpeakAttachment, error)
+	AddAttachment(ctx context.Context, speakID int, filePath string, originalName string, actorID int, attachmentType int) (*SpeakAttachment, error)
+	GetAttachments(ctx context.Context, speakID int, attachmentType int) ([]SpeakAttachment, error)
+	SoftDeleteAttachment(ctx context.Context, speakID int, attachmentID int, actorID int) error
 }
 
 type GormRepository struct {
@@ -73,6 +74,10 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 		items = append(items, toEntity(row))
 	}
 
+	if err := r.loadVolunteers(ctx, items); err != nil {
+		return nil, 0, err
+	}
+
 	return items, total, nil
 }
 
@@ -93,6 +98,10 @@ func (r *GormRepository) GetPaginatedAsReporter(ctx context.Context, page pagina
 	items := make([]Speak, 0, len(rows))
 	for _, row := range rows {
 		items = append(items, toEntity(row))
+	}
+
+	if err := r.loadVolunteers(ctx, items); err != nil {
+		return nil, 0, err
 	}
 
 	return items, total, nil
@@ -117,6 +126,10 @@ func (r *GormRepository) GetPaginatedAsRespondent(ctx context.Context, page pagi
 		items = append(items, toEntity(row))
 	}
 
+	if err := r.loadVolunteers(ctx, items); err != nil {
+		return nil, 0, err
+	}
+
 	return items, total, nil
 }
 
@@ -129,12 +142,15 @@ func (r *GormRepository) GetByID(ctx context.Context, id int) (*Speak, error) {
 		return nil, fmt.Errorf("failed get speak by id: %w", err)
 	}
 
-	out := toEntity(item)
-	if err := r.loadAttachments(ctx, &out); err != nil {
+	items := []Speak{toEntity(item)}
+	if err := r.loadAttachments(ctx, &items[0], 0); err != nil {
+		return nil, err
+	}
+	if err := r.loadVolunteers(ctx, items); err != nil {
 		return nil, err
 	}
 
-	return &out, nil
+	return &items[0], nil
 }
 
 func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Speak, error) {
@@ -205,13 +221,14 @@ func (r *GormRepository) Action(ctx context.Context, id int, req ActionRequest, 
 	return r.GetByID(ctx, id)
 }
 
-func (r *GormRepository) AddAttachment(ctx context.Context, speakID int, filePath string, originalName string, actorID int) (*SpeakAttachment, error) {
+func (r *GormRepository) AddAttachment(ctx context.Context, speakID int, filePath string, originalName string, actorID int, attachmentType int) (*SpeakAttachment, error) {
 	item := speakAttachmentModel{
 		SpeakID:      speakID,
 		FilePath:     filePath,
 		OriginalName: originalName,
 		CreatedBy:    &actorID,
 		UpdatedBy:    &actorID,
+		Type:         attachmentType,
 	}
 
 	if err := r.DB.WithContext(ctx).Create(&item).Error; err != nil {
@@ -223,9 +240,9 @@ func (r *GormRepository) AddAttachment(ctx context.Context, speakID int, filePat
 	return &out, nil
 }
 
-func (r *GormRepository) GetAttachments(ctx context.Context, speakID int) ([]SpeakAttachment, error) {
+func (r *GormRepository) GetAttachments(ctx context.Context, speakID int, attachmentType int) ([]SpeakAttachment, error) {
 	var rows []speakAttachmentModel
-	if err := r.DB.WithContext(ctx).Where("speak_id = ? AND deleted_at IS NULL", speakID).Order("id ASC").Find(&rows).Error; err != nil {
+	if err := r.DB.WithContext(ctx).Where("speak_id = ? AND type = ? AND deleted_at IS NULL", speakID, attachmentType).Order("id ASC").Find(&rows).Error; err != nil {
 		r.Logger.WithError(err).Error("Get SpeakAttachments failed")
 		return nil, fmt.Errorf("failed get speak attachments: %w", err)
 	}
@@ -238,13 +255,129 @@ func (r *GormRepository) GetAttachments(ctx context.Context, speakID int) ([]Spe
 	return items, nil
 }
 
-func (r *GormRepository) loadAttachments(ctx context.Context, speak *Speak) error {
-	items, err := r.GetAttachments(ctx, speak.ID)
+func (r *GormRepository) SoftDeleteAttachment(ctx context.Context, speakID int, attachmentID int, actorID int) error {
+	// Scope by speak_id as well so an attachment can only be deleted through its
+	// owning speak.
+	tx := r.DB.WithContext(ctx).Model(&speakAttachmentModel{}).
+		Where("id = ? AND speak_id = ? AND deleted_at IS NULL", attachmentID, speakID).
+		Updates(map[string]any{
+			"deleted_at": time.Now(),
+			"deleted_by": actorID,
+			"updated_by": actorID,
+			"updated_at": time.Now(),
+		})
+	if tx.Error != nil {
+		r.Logger.WithError(tx.Error).Error("SoftDelete SpeakAttachment failed")
+		return fmt.Errorf("failed soft delete speak attachment: %w", tx.Error)
+	}
+	if tx.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
+func (r *GormRepository) loadAttachments(ctx context.Context, speak *Speak, attachmentType int) error {
+	items, err := r.GetAttachments(ctx, speak.ID, attachmentType)
 	if err != nil {
 		return err
 	}
 
 	speak.Attachments = items
+	return nil
+}
+
+// speakVolunteerRow is the minimal volunteers projection used to fill the PIC
+// and reporter (created_by) volunteer references on a speak.
+type speakVolunteerRow struct {
+	ID             int    `gorm:"column:id"`
+	UserID         int    `gorm:"column:user_id"`
+	IndonesianName string `gorm:"column:indonesian_name"`
+	VISID          string `gorm:"column:vis_id"`
+	Phone          string `gorm:"column:phone"`
+}
+
+func (row speakVolunteerRow) toRef() SpeakVolunteer {
+	return SpeakVolunteer{
+		ID:             row.ID,
+		UserID:         row.UserID,
+		IndonesianName: row.IndonesianName,
+		VISID:          row.VISID,
+		Phone:          row.Phone,
+	}
+}
+
+// loadVolunteers resolves, for every speak in items:
+//   - PICVolunteer       from pic (pic_user_id) -> volunteers.id
+//   - CreatedByVolunteer from created_by (users.id) -> volunteers.user_id
+//
+// Each side is loaded in a single batched query. Missing / soft-deleted
+// volunteers simply leave the corresponding reference nil.
+func (r *GormRepository) loadVolunteers(ctx context.Context, items []Speak) error {
+	picIDSet := make(map[int]struct{})
+	picIDs := make([]int, 0, len(items))
+	userIDSet := make(map[int]struct{})
+	userIDs := make([]int, 0, len(items))
+
+	for _, item := range items {
+		if item.PicUserID > 0 {
+			if _, ok := picIDSet[item.PicUserID]; !ok {
+				picIDSet[item.PicUserID] = struct{}{}
+				picIDs = append(picIDs, item.PicUserID)
+			}
+		}
+		if item.CreatedBy != nil && *item.CreatedBy > 0 {
+			if _, ok := userIDSet[*item.CreatedBy]; !ok {
+				userIDSet[*item.CreatedBy] = struct{}{}
+				userIDs = append(userIDs, *item.CreatedBy)
+			}
+		}
+	}
+
+	byVolunteerID := make(map[int]SpeakVolunteer)
+	if len(picIDs) > 0 {
+		var rows []speakVolunteerRow
+		if err := r.DB.WithContext(ctx).
+			Table("volunteers").
+			Select("id", "user_id", "indonesian_name", "vis_id", "phone").
+			Where("id IN ? AND deleted_at IS NULL", picIDs).
+			Find(&rows).Error; err != nil {
+			r.Logger.WithError(err).Error("loadVolunteers (pic) failed")
+			return fmt.Errorf("failed load speak pic volunteer: %w", err)
+		}
+		for _, row := range rows {
+			byVolunteerID[row.ID] = row.toRef()
+		}
+	}
+
+	byUserID := make(map[int]SpeakVolunteer)
+	if len(userIDs) > 0 {
+		var rows []speakVolunteerRow
+		if err := r.DB.WithContext(ctx).
+			Table("volunteers").
+			Select("id", "user_id", "indonesian_name", "vis_id", "phone").
+			Where("user_id IN ? AND deleted_at IS NULL", userIDs).
+			Find(&rows).Error; err != nil {
+			r.Logger.WithError(err).Error("loadVolunteers (created_by) failed")
+			return fmt.Errorf("failed load speak reporter volunteer: %w", err)
+		}
+		for _, row := range rows {
+			byUserID[row.UserID] = row.toRef()
+		}
+	}
+
+	for i := range items {
+		if v, ok := byVolunteerID[items[i].PicUserID]; ok {
+			ref := v
+			items[i].PICVolunteer = &ref
+		}
+		if items[i].CreatedBy != nil {
+			if v, ok := byUserID[*items[i].CreatedBy]; ok {
+				ref := v
+				items[i].CreatedByVolunteer = &ref
+			}
+		}
+	}
 	return nil
 }
 

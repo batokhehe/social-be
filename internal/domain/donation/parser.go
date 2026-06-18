@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -247,4 +248,56 @@ func parseAmount(raw string) (float64, error) {
 		return 0, fmt.Errorf("invalid amount %q", raw)
 	}
 	return value, nil
+}
+
+// indonesianMonths maps lower-cased Indonesian month names to their value.
+var indonesianMonths = map[string]time.Month{
+	"januari": time.January, "februari": time.February, "maret": time.March,
+	"april": time.April, "mei": time.May, "juni": time.June,
+	"juli": time.July, "agustus": time.August, "september": time.September,
+	"oktober": time.October, "november": time.November, "desember": time.December,
+}
+
+// parsePeriod interprets the donation period carried in the "Catatan" column.
+// It accepts common explicit date layouts and Indonesian "Month Year" text:
+//
+//	"Desember 2025" -> 2025-12-01
+//	"2025-12-01"    -> 2025-12-01
+//	"12/2025"       -> 2025-12-01
+//	"2025"          -> 2025-01-01
+//
+// Returns nil when empty or unrecognised (period is optional, never fails a row).
+func parsePeriod(raw string) *time.Time {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return nil
+	}
+
+	layouts := []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+		"02/01/2006",
+		"01/2006",
+		"2006-01",
+		"2006",
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return &t
+		}
+	}
+
+	// "Month Year" (Indonesian), e.g. "Desember 2025".
+	fields := strings.Fields(strings.ToLower(s))
+	if len(fields) == 2 {
+		if month, ok := indonesianMonths[fields[0]]; ok {
+			if year, err := strconv.Atoi(fields[1]); err == nil {
+				t := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+				return &t
+			}
+		}
+	}
+
+	return nil
 }

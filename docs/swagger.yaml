@@ -490,7 +490,7 @@ definitions:
       name:
         maxLength: 100
         type: string
-      pic_name:
+      volunteer_id:
         maxLength: 100
         type: string
       pic_phone:
@@ -504,7 +504,7 @@ definitions:
     required:
     - id_group_donatur
     - name
-    - pic_name
+    - volunteer_id
     - pic_phone
     type: object
   masterdonaturgroup.UpdateRequest:
@@ -515,7 +515,7 @@ definitions:
       name:
         maxLength: 100
         type: string
-      pic_name:
+      volunteer_id:
         maxLength: 100
         type: string
       pic_phone:
@@ -529,7 +529,7 @@ definitions:
     required:
     - id_group_donatur
     - name
-    - pic_name
+    - volunteer_id
     - pic_phone
     type: object
   religion.CreateRequest:

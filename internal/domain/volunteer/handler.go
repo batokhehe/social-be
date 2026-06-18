@@ -3,6 +3,7 @@ package volunteer
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"social-be/internal/pkg/apperror"
 	"social-be/internal/pkg/logger"
@@ -74,6 +75,8 @@ func (h *Handler) Create(c *gin.Context) {
 // @Security BearerAuth
 // @Param page query int false "Page number"
 // @Param limit query int false "Page size"
+// @Param district query string false "Filter by district"
+// @Param search query string false "Search by name or vis_id"
 // @Success 200 {object} map[string]interface{}
 // @Router /master/volunteers [get]
 func (h *Handler) GetAll(c *gin.Context) {
@@ -82,12 +85,31 @@ func (h *Handler) GetAll(c *gin.Context) {
 		response.AbortError(c, appErr)
 		return
 	}
-	items, meta, err := h.Service.GetPaginated(c.Request.Context(), page)
+	district := strings.TrimSpace(c.Query("district"))
+	search := strings.TrimSpace(c.Query("search"))
+	items, meta, err := h.Service.GetPaginated(c.Request.Context(), page, district, search)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_802", "failed to fetch volunteer"))
 		return
 	}
 	response.SuccessWithPagination(c, items, meta)
+}
+
+// GetDistricts godoc
+// @Summary Get distinct volunteer districts
+// @Description Get the list of distinct district values across volunteers
+// @Tags volunteer
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /master/volunteers/districts [get]
+func (h *Handler) GetDistricts(c *gin.Context) {
+	items, err := h.Service.GetDistricts(c.Request.Context())
+	if err != nil {
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_802", "failed to fetch volunteer districts"))
+		return
+	}
+	response.Success(c, items)
 }
 
 // GetSelect godoc

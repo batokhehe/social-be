@@ -21,13 +21,35 @@ type Speak struct {
 	UpdatedAt     time.Time         `json:"updated_at"`
 	DeletedAt     *time.Time        `json:"deleted_at,omitempty"`
 	Attachments   []SpeakAttachment `json:"attachments,omitempty"`
+	// PICVolunteer is the volunteer in charge, resolved from pic (pic_user_id)
+	// against volunteers.id. CreatedByVolunteer is the reporter, resolved from
+	// created_by (users.id) against volunteers.user_id. Both are null if no
+	// matching volunteer exists.
+	PICVolunteer       *SpeakVolunteer `json:"pic_volunteer"`
+	CreatedByVolunteer *SpeakVolunteer `json:"created_by_volunteer"`
 }
+
+// SpeakVolunteer is the volunteer reference embedded in a speak (PIC / reporter).
+type SpeakVolunteer struct {
+	ID             int    `json:"id"`
+	UserID         int    `json:"user_id"`
+	IndonesianName string `json:"indonesian_name"`
+	VISID          string `json:"vis_id"`
+	Phone          string `json:"phone"`
+}
+
+// Speak attachment owner types.
+const (
+	AttachmentTypeReporter   = 0
+	AttachmentTypeRespondent = 1
+)
 
 type SpeakAttachment struct {
 	ID           int        `json:"id"`
 	SpeakID      int        `json:"speak_id"`
 	FilePath     string     `json:"file_path"`
 	OriginalName string     `json:"original_name"`
+	Type         int        `json:"type"` // 0 = reporter, 1 = respondent
 	CreatedBy    *int       `json:"created_by,omitempty"`
 	UpdatedBy    *int       `json:"updated_by,omitempty"`
 	DeletedBy    *int       `json:"deleted_by,omitempty"`
@@ -67,6 +89,7 @@ type speakAttachmentModel struct {
 	CreatedAt    time.Time  `gorm:"column:created_at"`
 	UpdatedAt    time.Time  `gorm:"column:updated_at"`
 	DeletedAt    *time.Time `gorm:"column:deleted_at"`
+	Type         int        `gorm:"column:type"`
 }
 
 func (speakModel) TableName() string {
@@ -118,6 +141,7 @@ func toAttachmentEntity(item speakAttachmentModel) SpeakAttachment {
 		SpeakID:      item.SpeakID,
 		FilePath:     item.FilePath,
 		OriginalName: item.OriginalName,
+		Type:         item.Type,
 		CreatedBy:    item.CreatedBy,
 		UpdatedBy:    item.UpdatedBy,
 		DeletedBy:    item.DeletedBy,

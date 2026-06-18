@@ -1,0 +1,3 @@
+ALTER TABLE donations
+    DROP COLUMN IF EXISTS period,
+    DROP COLUMN IF EXISTS type;

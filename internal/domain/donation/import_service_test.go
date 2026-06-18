@@ -36,7 +36,9 @@ type mockDonationRepo struct {
 }
 
 func (m *mockDonationRepo) Create(ctx context.Context, d *Donation) (*Donation, error) { return d, nil }
-func (m *mockDonationRepo) GetAll(ctx context.Context) ([]Donation, error)             { return nil, nil }
+func (m *mockDonationRepo) GetAll(ctx context.Context, donationType *int) ([]Donation, error) {
+	return nil, nil
+}
 func (m *mockDonationRepo) GetByID(ctx context.Context, id int) (*Donation, error)     { return nil, nil }
 func (m *mockDonationRepo) Update(ctx context.Context, d *Donation) (*Donation, error) { return d, nil }
 func (m *mockDonationRepo) Delete(ctx context.Context, id int) error                   { return nil }
@@ -527,5 +529,64 @@ func TestHistory_ExportErrorsXLSX(t *testing.T) {
 	}
 	if rows[1][1] != "D999" {
 		t.Errorf("unexpected data row: %v", rows[1])
+	}
+}
+
+func TestImport_TypeDefaultsAndPeriodFromCatatan(t *testing.T) {
+	repo := baseRepo()
+	svc := NewImportService(repo)
+	xlsx := buildXLSX(t, [][]string{
+		{"1", "D2053534", "Adrian", "Amal", "Desember 2025", "20.000"},
+	})
+
+	_, err := svc.Import(context.Background(), bytes.NewReader(xlsx), ImportOptions{Filename: "d.xlsx"})
+	if err != nil {
+		t.Fatalf("Import error: %v", err)
+	}
+	if len(repo.persisted) != 1 {
+		t.Fatalf("persisted = %d, want 1", len(repo.persisted))
+	}
+	got := repo.persisted[0]
+	if got.Type != DonationTypeMoney {
+		t.Errorf("type = %d, want %d (money)", got.Type, DonationTypeMoney)
+	}
+	if got.Period == nil {
+		t.Fatal("period should be parsed from Catatan, got nil")
+	}
+	if got.Period.Year() != 2025 || got.Period.Month() != time.December {
+		t.Errorf("period = %v, want December 2025", got.Period)
+	}
+}
+
+func TestParsePeriod(t *testing.T) {
+	cases := []struct {
+		in        string
+		wantNil   bool
+		wantYear  int
+		wantMonth time.Month
+	}{
+		{"Desember 2025", false, 2025, time.December},
+		{"januari 2024", false, 2024, time.January},
+		{"2025-12-01", false, 2025, time.December},
+		{"12/2025", false, 2025, time.December},
+		{"2025", false, 2025, time.January},
+		{"", true, 0, 0},
+		{"not a date", true, 0, 0},
+	}
+	for _, c := range cases {
+		got := parsePeriod(c.in)
+		if c.wantNil {
+			if got != nil {
+				t.Errorf("parsePeriod(%q) = %v, want nil", c.in, got)
+			}
+			continue
+		}
+		if got == nil {
+			t.Errorf("parsePeriod(%q) = nil, want %d-%02d", c.in, c.wantYear, c.wantMonth)
+			continue
+		}
+		if got.Year() != c.wantYear || got.Month() != c.wantMonth {
+			t.Errorf("parsePeriod(%q) = %v, want %d-%02d", c.in, got, c.wantYear, c.wantMonth)
+		}
 	}
 }

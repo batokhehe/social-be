@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"social-be/internal/pkg/pagination"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -67,6 +69,157 @@ func toEntity(item masterDonaturModel) MasterDonatur {
 	}
 }
 
+// loadVolunteers resolves, for each donatur, the volunteer behind its
+// id_vis_volunteer (parsed as volunteers.id) and that volunteer's master area,
+// using one batched query per side. A donatur with an empty/non-numeric
+// id_vis_volunteer, or one pointing to a missing/soft-deleted volunteer, keeps a
+// nil Volunteer.
+func (r *GormRepository) loadVolunteers(ctx context.Context, items []MasterDonatur) error {
+	volIDSet := make(map[int]struct{})
+	volIDs := make([]int, 0, len(items))
+	for _, item := range items {
+		if id, ok := parseVolunteerID(item.VisVolunteerID); ok {
+			if _, seen := volIDSet[id]; !seen {
+				volIDSet[id] = struct{}{}
+				volIDs = append(volIDs, id)
+			}
+		}
+	}
+	if len(volIDs) == 0 {
+		return nil
+	}
+
+	var volRows []struct {
+		ID             int    `gorm:"column:id"`
+		VISID          string `gorm:"column:vis_id"`
+		IndonesianName string `gorm:"column:indonesian_name"`
+		MasterAreaID   int    `gorm:"column:master_area_id"`
+	}
+	if err := r.DB.WithContext(ctx).
+		Table("volunteers").
+		Select("id", "vis_id", "indonesian_name", "master_area_id").
+		Where("id IN ? AND deleted_at IS NULL", volIDs).
+		Find(&volRows).Error; err != nil {
+		r.Logger.WithError(err).Error("loadVolunteers MasterDonatur failed")
+		return fmt.Errorf("failed load donatur volunteers: %w", err)
+	}
+
+	areaIDSet := make(map[int]struct{})
+	areaIDs := make([]int, 0, len(volRows))
+	for _, vr := range volRows {
+		if vr.MasterAreaID > 0 {
+			if _, ok := areaIDSet[vr.MasterAreaID]; !ok {
+				areaIDSet[vr.MasterAreaID] = struct{}{}
+				areaIDs = append(areaIDs, vr.MasterAreaID)
+			}
+		}
+	}
+
+	byAreaID := make(map[int]MasterAreaInfo)
+	if len(areaIDs) > 0 {
+		var areaRows []struct {
+			ID       int    `gorm:"column:id"`
+			Name     string `gorm:"column:name"`
+			Location string `gorm:"column:location"`
+		}
+		if err := r.DB.WithContext(ctx).
+			Table("master_areas").
+			Select("id", "name", "location").
+			Where("id IN ? AND deleted_at IS NULL", areaIDs).
+			Find(&areaRows).Error; err != nil {
+			r.Logger.WithError(err).Error("loadVolunteers (areas) MasterDonatur failed")
+			return fmt.Errorf("failed load donatur volunteer areas: %w", err)
+		}
+		for _, ar := range areaRows {
+			byAreaID[ar.ID] = MasterAreaInfo{ID: ar.ID, Name: ar.Name, Location: ar.Location}
+		}
+	}
+
+	byVolID := make(map[int]DonaturVolunteer, len(volRows))
+	for _, vr := range volRows {
+		vol := DonaturVolunteer{
+			ID:             vr.ID,
+			VISID:          vr.VISID,
+			IndonesianName: vr.IndonesianName,
+			MasterAreaID:   vr.MasterAreaID,
+		}
+		if area, ok := byAreaID[vr.MasterAreaID]; ok {
+			a := area
+			vol.MasterArea = &a
+		}
+		byVolID[vr.ID] = vol
+	}
+
+	for i := range items {
+		if id, ok := parseVolunteerID(items[i].VisVolunteerID); ok {
+			if vol, found := byVolID[id]; found {
+				v := vol
+				items[i].Volunteer = &v
+			}
+		}
+	}
+	return nil
+}
+
+// loadDonaturGroups resolves each donatur's group (id_group_donatur ->
+// master_donatur_groups.id) in one batched query. Donaturs with a NULL group or
+// pointing to a missing/soft-deleted group keep a nil DonaturGroup.
+func (r *GormRepository) loadDonaturGroups(ctx context.Context, items []MasterDonatur) error {
+	idSet := make(map[int]struct{})
+	ids := make([]int, 0, len(items))
+	for _, item := range items {
+		if item.DonaturGroupID != nil && *item.DonaturGroupID > 0 {
+			if _, ok := idSet[*item.DonaturGroupID]; !ok {
+				idSet[*item.DonaturGroupID] = struct{}{}
+				ids = append(ids, *item.DonaturGroupID)
+			}
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	var rows []struct {
+		ID      int    `gorm:"column:id"`
+		GroupID string `gorm:"column:id_group_donatur"`
+		Name    string `gorm:"column:name"`
+		Status  string `gorm:"column:status"`
+	}
+	if err := r.DB.WithContext(ctx).
+		Table("master_donatur_groups").
+		Select("id", "id_group_donatur", "name", "status").
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Find(&rows).Error; err != nil {
+		r.Logger.WithError(err).Error("loadDonaturGroups MasterDonatur failed")
+		return fmt.Errorf("failed load donatur groups: %w", err)
+	}
+
+	byID := make(map[int]DonaturGroupInfo, len(rows))
+	for _, row := range rows {
+		byID[row.ID] = DonaturGroupInfo{ID: row.ID, GroupID: row.GroupID, Name: row.Name, Status: row.Status}
+	}
+
+	for i := range items {
+		if items[i].DonaturGroupID != nil {
+			if g, ok := byID[*items[i].DonaturGroupID]; ok {
+				ref := g
+				items[i].DonaturGroup = &ref
+			}
+		}
+	}
+	return nil
+}
+
+// parseVolunteerID parses id_vis_volunteer into a volunteers PK. Returns
+// (0, false) when empty or non-numeric (donatur without a volunteer).
+func parseVolunteerID(visVolunteerID string) (int, bool) {
+	id, err := strconv.Atoi(strings.TrimSpace(visVolunteerID))
+	if err != nil || id <= 0 {
+		return 0, false
+	}
+	return id, true
+}
+
 func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID int) (*MasterDonatur, error) {
 	item := masterDonaturModel{
 		DonaturID:      req.DonaturID,
@@ -118,6 +271,13 @@ func (r *GormRepository) GetAll(ctx context.Context) ([]MasterDonatur, error) {
 		items = append(items, toEntity(row))
 	}
 
+	if err := r.loadVolunteers(ctx, items); err != nil {
+		return nil, err
+	}
+	if err := r.loadDonaturGroups(ctx, items); err != nil {
+		return nil, err
+	}
+
 	return items, nil
 }
 
@@ -144,6 +304,13 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 		items = append(items, toEntity(row))
 	}
 
+	if err := r.loadVolunteers(ctx, items); err != nil {
+		return nil, 0, err
+	}
+	if err := r.loadDonaturGroups(ctx, items); err != nil {
+		return nil, 0, err
+	}
+
 	return items, total, nil
 }
 
@@ -161,8 +328,15 @@ func (r *GormRepository) GetByID(ctx context.Context, id int) (*MasterDonatur, e
 		return nil, fmt.Errorf("failed get master donatur by id: %w", err)
 	}
 
-	out := toEntity(item)
-	return &out, nil
+	items := []MasterDonatur{toEntity(item)}
+	if err := r.loadVolunteers(ctx, items); err != nil {
+		return nil, err
+	}
+	if err := r.loadDonaturGroups(ctx, items); err != nil {
+		return nil, err
+	}
+
+	return &items[0], nil
 }
 
 func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*MasterDonatur, error) {

@@ -4059,7 +4059,7 @@ const docTemplate = `{
             "required": [
                 "id_group_donatur",
                 "name",
-                "pic_name",
+                "volunteer_id",
                 "pic_phone"
             ],
             "properties": {
@@ -4071,7 +4071,7 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100
                 },
-                "pic_name": {
+                "volunteer_id": {
                     "type": "string",
                     "maxLength": 100
                 },
@@ -4093,7 +4093,7 @@ const docTemplate = `{
             "required": [
                 "id_group_donatur",
                 "name",
-                "pic_name",
+                "volunteer_id",
                 "pic_phone"
             ],
             "properties": {
@@ -4105,7 +4105,7 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100
                 },
-                "pic_name": {
+                "volunteer_id": {
                     "type": "string",
                     "maxLength": 100
                 },

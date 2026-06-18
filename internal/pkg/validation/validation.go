@@ -67,7 +67,7 @@ func validationMessage(req any, fieldErr validator.FieldError) string {
 	field := jsonFieldName(req, fieldErr.StructField())
 
 	switch fieldErr.Tag() {
-	case "required":
+	case "required", "required_if", "required_unless", "required_with", "required_without":
 		return field + " is required"
 	case "email":
 		return field + " must be a valid email"

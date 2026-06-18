@@ -252,11 +252,12 @@ func (s *ImportService) classifyRow(
 		Donation: ImportedDonation{
 			DonaturID:          donor.ID,
 			DonaturGroupID:     donor.DonaturGroupID, // enriched from donor, may be NULL
-			AreaID:             nil,                   // not present in the import sheet
+			AreaID:             nil,                  // not present in the import sheet
 			DonationCategoryID: categoryID,
+			Type:               DonationTypeMoney,     // Excel imports default to money donation
+			Period:             parsePeriod(row.Note), // donation period parsed from "Catatan"
 			Currency:           defaultImportCurrency,
 			Amount:             amount,
-			OtherItems:         row.Note,
 		},
 	}, nil
 }

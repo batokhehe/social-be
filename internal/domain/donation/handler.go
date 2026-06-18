@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"social-be/internal/pkg/apperror"
+	"social-be/internal/pkg/logger"
 	"social-be/internal/pkg/pagination"
 	"social-be/internal/pkg/query"
 	"social-be/internal/pkg/response"
@@ -61,14 +62,25 @@ var importHistorySortable = map[string]string{
 
 // GetAll godoc
 // @Summary Get all donations
-// @Description Get list of donations
+// @Description Get list of donations, optionally filtered by type (0=money, 1=goods)
 // @Tags donation
 // @Produce json
 // @Security BearerAuth
+// @Param type query int false "Filter by donation type: 0 = money, 1 = goods"
 // @Success 200 {object} map[string]interface{}
 // @Router /donations [get]
 func (h *Handler) GetAll(c *gin.Context) {
-	items, err := h.Service.GetAll(c.Request.Context())
+	var donationType *int
+	if raw := strings.TrimSpace(c.Query("type")); raw != "" {
+		t, err := strconv.Atoi(raw)
+		if err != nil || (t != DonationTypeMoney && t != DonationTypeGoods) {
+			response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "invalid type: must be 0 (money) or 1 (goods)"))
+			return
+		}
+		donationType = &t
+	}
+
+	items, err := h.Service.GetAll(c.Request.Context(), donationType)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_900", "failed to fetch donations"))
 		return
@@ -204,12 +216,16 @@ func (h *Handler) Import(c *gin.Context) {
 	}
 
 	// Cap the request body before any buffering to defend against oversized
-	// uploads (the multipart reader will error past the limit).
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxImportFileSize)
+	// uploads (the multipart reader will error past the limit). Allow some
+	// overhead above the file-size limit for multipart boundaries/headers.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxImportFileSize+(1<<20))
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidBody, "file is required (max 10MB)"))
+		// Surface the real reason (wrong Content-Type, missing boundary, body
+		// too large, ...) in the error detail instead of an opaque message.
+		logger.FromContext(c.Request.Context()).WithError(err).Warn("donation import: could not read uploaded file")
+		response.AbortError(c, apperror.Wrap(err, http.StatusBadRequest, apperror.CodeInvalidBody, "file is required: send it as multipart/form-data under the field name 'file' (max 10MB)"))
 		return
 	}
 

@@ -52,12 +52,16 @@ func (m *mockVolunteerRepo) Create(ctx context.Context, req CreateRequest, actor
 	return nil, nil
 }
 
-func (m *mockVolunteerRepo) GetPaginated(ctx context.Context, page pagination.Query) ([]Volunteer, int64, error) {
+func (m *mockVolunteerRepo) GetPaginated(ctx context.Context, page pagination.Query, district string, search string) ([]Volunteer, int64, error) {
 	return nil, 0, nil
 }
 
 func (m *mockVolunteerRepo) GetSelect(ctx context.Context) ([]Volunteer, int64, error) {
 	return nil, 0, nil
+}
+
+func (m *mockVolunteerRepo) GetDistinctDistricts(ctx context.Context) ([]string, error) {
+	return nil, nil
 }
 
 func (m *mockVolunteerRepo) GetByID(ctx context.Context, id int) (*Volunteer, error) {
