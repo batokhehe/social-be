@@ -46,7 +46,7 @@ type CreateRequest struct {
 	HomePhone             string            `json:"home_phone" validate:"omitempty,max=30"`
 	OfficePhone           string            `json:"office_phone" validate:"omitempty,max=30"`
 	Phone                 string            `json:"phone" validate:"max=30"`
-	Email                 string            `json:"email" validate:"email,max=100"`
+	Email                 string            `json:"email" validate:"omitempty,email,max=100"`
 	InterestedActivityIDs []int             `json:"interested_activity_ids" validate:"required,min=1,dive,min=1"`
 	Languages             string            `json:"languages" validate:"required,max=255"`
 	PrivateVehicle        bool              `json:"private_vehicle"`

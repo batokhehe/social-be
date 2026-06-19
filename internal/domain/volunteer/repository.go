@@ -149,8 +149,11 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 		r.Logger.WithError(err).Error("Create Volunteer failed")
 		return nil, fmt.Errorf("failed create volunteer: %w", err)
 	}
-	if err := mailer.SendPasswordReset(ctx, req.Email, req.IndonesianName, resetLink); err != nil {
-		r.Logger.WithError(err).WithField("email", req.Email).Error("failed send password reset email")
+	// Email is optional for volunteers; only attempt delivery when one was given.
+	if req.Email != "" {
+		if err := mailer.SendPasswordReset(ctx, req.Email, req.IndonesianName, resetLink); err != nil {
+			r.Logger.WithError(err).WithField("email", req.Email).Error("failed send password reset email")
+		}
 	}
 	return r.GetByID(ctx, id)
 }

@@ -1563,6 +1563,32 @@ paths:
       summary: Get completed events for volunteer
       tags:
       - event
+  /events/involved:
+    get:
+      description: List events where the logged-in user is the PIC or a participant
+        who has checked in
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get events the current user is involved in
+      tags:
+      - event
   /login:
     post:
       consumes:

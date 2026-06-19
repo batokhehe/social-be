@@ -153,6 +153,54 @@ func TestUpdateVolunteer_WithNewProfileFields(t *testing.T) {
 	}
 }
 
+func TestCreateVolunteer_EmailOptional(t *testing.T) {
+	// A fully valid payload with no email field at all.
+	const bodyNoEmail = `{
+		"vis_id":"V002",
+		"indonesian_name":"Siti",
+		"birth_place":"Bandung",
+		"birth_date":"1992-05-05",
+		"gender":"female",
+		"master_area_id":1,
+		"level_volunteer_id":1,
+		"religion_id":1,
+		"blood_type":"A",
+		"rhesus":"positive",
+		"last_education":"S1",
+		"marital_status":"single",
+		"profession":"Teacher",
+		"field":"Education",
+		"residential_address":"Jl. Melati No. 2",
+		"postal_code":"40123",
+		"phone":"08129998887",
+		"interested_activity_ids":[1],
+		"languages":"Indonesian",
+		"free_times":[{"day_of_week":"tuesday","period":"evening"}]
+	}`
+
+	var captured CreateRequest
+	repo := &mockVolunteerRepo{
+		createFn: func(ctx context.Context, req CreateRequest, actorID int) (*Volunteer, error) {
+			captured = req
+			return &Volunteer{ID: 11, Email: req.Email}, nil
+		},
+	}
+	h := &Handler{Service: &Service{Repo: repo}}
+	r := newRouter(h)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/volunteers", strings.NewReader(bodyNoEmail))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200 for missing email, got %d (body=%s)", w.Code, w.Body.String())
+	}
+	if captured.Email != "" {
+		t.Fatalf("expected empty email passed to repo, got %q", captured.Email)
+	}
+}
+
 func TestCreateVolunteer_InvalidGender_Returns400(t *testing.T) {
 	repo := &mockVolunteerRepo{
 		createFn: func(ctx context.Context, req CreateRequest, actorID int) (*Volunteer, error) {

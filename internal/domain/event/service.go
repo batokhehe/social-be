@@ -71,6 +71,29 @@ func (s *Service) GetActiveEvents(
 	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
 }
 
+// GetInvolvedEvents lists events where the user is the PIC or a checked-in
+// participant. The user may not be a volunteer (e.g. an admin who is only a
+// PIC); in that case volunteerID resolves to 0 and only PIC events match.
+func (s *Service) GetInvolvedEvents(ctx context.Context, userID int, page pagination.Query) ([]Event, pagination.Meta, error) {
+	volunteerID := 0
+
+	volunteerData, err := s.VolunteerService.GetByUserID(ctx, userID)
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, pagination.Meta{}, err
+		}
+	} else {
+		volunteerID = volunteerData.ID
+	}
+
+	items, total, err := s.Repo.GetInvolvedEvents(ctx, userID, volunteerID, page)
+	if err != nil {
+		return nil, pagination.Meta{}, err
+	}
+
+	return items, pagination.NewMeta(page.Page, page.Limit, total), nil
+}
+
 func (s *Service) GetAppliedEvents(ctx context.Context, userID int, page pagination.Query) ([]Event, pagination.Meta, error) {
 	volunteerData, err := s.VolunteerService.GetByUserID(ctx, userID)
 	if err != nil {

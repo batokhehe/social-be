@@ -19,6 +19,11 @@ type Repository interface {
 	GetActiveEvents(ctx context.Context, userID int, now time.Time, page pagination.Query) ([]Event, int64, error)
 	GetAppliedEventsByVolunteer(ctx context.Context, volunteerID int, page pagination.Query) ([]Event, int64, error)
 	GetCompletedEventsByVolunteer(ctx context.Context, volunteerID int, page pagination.Query) ([]Event, int64, error)
+	// GetInvolvedEvents returns events the user is involved in: either the event
+	// PIC (events.pic_user_id = userID) or a participant who has checked in
+	// (event_attendances.volunteer_id = volunteerID AND checkin_at IS NOT NULL).
+	// volunteerID may be 0 when the user is not a volunteer (PIC-only).
+	GetInvolvedEvents(ctx context.Context, userID int, volunteerID int, page pagination.Query) ([]Event, int64, error)
 	GetByID(ctx context.Context, id int) (*Event, error)
 	Update(ctx context.Context, id int, req UpdateRequest, startAt, endAt time.Time, actorID int) (*Event, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
@@ -397,6 +402,53 @@ func (r *GormRepository) GetCompletedEventsByVolunteer(
 			volunteerID,
 		); err != nil {
 			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, nil
+}
+
+// GetInvolvedEvents lists events where the user is the PIC or a checked-in
+// participant. An EXISTS subquery is used for the participant side so an event
+// with multiple attendances is not duplicated when OR-combined with the PIC
+// match (no DISTINCT needed).
+func (r *GormRepository) GetInvolvedEvents(ctx context.Context, userID int, volunteerID int, page pagination.Query) ([]Event, int64, error) {
+	baseQuery := r.DB.WithContext(ctx).
+		Model(&eventModel{}).
+		Where("events.deleted_at IS NULL").
+		Where(`(
+			events.pic_user_id = ?
+			OR EXISTS (
+				SELECT 1 FROM event_attendances ea
+				WHERE ea.event_id = events.id
+					AND ea.volunteer_id = ?
+					AND ea.checkin_at IS NOT NULL
+					AND ea.deleted_at IS NULL
+			)
+		)`, userID, volunteerID)
+
+	var total int64
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed count involved events: %w", err)
+	}
+
+	var rows []eventModel
+	if err := baseQuery.
+		Order("events.start_at DESC").
+		Limit(page.Limit).
+		Offset(page.Offset).
+		Find(&rows).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed get involved events: %w", err)
+	}
+
+	items := make([]Event, 0, len(rows))
+	for _, row := range rows {
+		item := toEntity(row)
+		_ = r.loadPicUser(ctx, &item)
+		if volunteerID != 0 {
+			if err := r.loadAttendanceByVolunteer(ctx, &item, volunteerID); err != nil {
+				return nil, 0, err
+			}
 		}
 		items = append(items, item)
 	}

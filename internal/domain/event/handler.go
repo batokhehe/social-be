@@ -270,6 +270,35 @@ func (h *Handler) GetVolunteerEvents(c *gin.Context) {
 	response.SuccessWithPagination(c, items, meta)
 }
 
+// GetInvolvedEvents godoc
+// @Summary Get events the current user is involved in
+// @Description List events where the logged-in user is the PIC or a participant who has checked in
+// @Tags event
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param limit query int false "Page size"
+// @Success 200 {object} map[string]interface{}
+// @Router /events/involved [get]
+func (h *Handler) GetInvolvedEvents(c *gin.Context) {
+	page, appErr := pagination.FromGin(c)
+	if appErr != nil {
+		response.AbortError(c, appErr)
+		return
+	}
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+	items, meta, err := h.Service.GetInvolvedEvents(c.Request.Context(), actor, page)
+	if err != nil {
+		logger.FromContext(c.Request.Context()).WithError(err).Error("failed to fetch involved events")
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_913", "failed to fetch involved events"))
+		return
+	}
+	response.SuccessWithPagination(c, items, meta)
+}
+
 // GetAppliedVolunteerEvents godoc
 // @Summary Get applied events for volunteer
 // @Description List events that current volunteer has registered for

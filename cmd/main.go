@@ -345,6 +345,7 @@ func main() {
 	volunteerEvents.GET("", eventHandler.GetVolunteerEvents)
 	volunteerEvents.GET("/applied", eventHandler.GetAppliedVolunteerEvents)
 	volunteerEvents.GET("/completed", eventHandler.GetCompletedVolunteerEvents)
+	volunteerEvents.GET("/involved", eventHandler.GetInvolvedEvents)
 	volunteerEvents.GET(":id", eventHandler.GetVolunteerEventByID)
 	volunteerEvents.POST(":id/apply", eventHandler.ApplyToEvent)
 	volunteerEvents.POST(":id/checkin", eventHandler.CheckInEvent)
