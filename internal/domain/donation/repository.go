@@ -334,10 +334,34 @@ func (r *GormRepository) GetByID(ctx context.Context, id int) (*Donation, error)
 }
 
 func (r *GormRepository) Update(ctx context.Context, donation *Donation) (*Donation, error) {
-	if err := r.DB.WithContext(ctx).Save(donation).Error; err != nil {
-		return nil, err
+	// Update only the editable columns. Using Save would write every column from
+	// the struct -- including the zero-valued CreatedAt -- and reset created_at
+	// to 0001-01-01 (and wipe period / import_batch_id). updated_at is refreshed
+	// explicitly; created_at is never touched.
+	updates := map[string]any{
+		"donatur_id":           donation.DonaturID,
+		"donatur_group_id":     donation.DonaturGroupID,
+		"area_id":              donation.AreaID,
+		"donation_category_id": donation.DonationCategoryID,
+		"type":                 donation.Type,
+		"currency":             donation.Currency,
+		"amount":               donation.Amount,
+		"other_items":          donation.OtherItems,
+		"updated_by":           donation.UpdatedBy,
+		"updated_at":           time.Now(),
 	}
-	return donation, nil
+	res := r.DB.WithContext(ctx).
+		Model(&Donation{}).
+		Where("id = ?", donation.ID).
+		Updates(updates)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return r.GetByID(ctx, donation.ID)
 }
 
 func (r *GormRepository) Delete(ctx context.Context, id int) error {

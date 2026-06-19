@@ -12,7 +12,7 @@ func NewService(repo Repository) *Service {
 	return &Service{Repo: repo}
 }
 
-func (s *Service) Create(ctx context.Context, req CreateRequest) (*Donation, error) {
+func (s *Service) Create(ctx context.Context, req CreateRequest, actorID int) (*Donation, error) {
 	otherItems := req.OtherItems
 	item := &Donation{
 		DonaturID:          req.DonaturID,
@@ -23,6 +23,8 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (*Donation, err
 		Currency:           req.Currency,
 		Amount:             req.Amount,
 		OtherItems:         &otherItems,
+		CreatedBy:          &actorID,
+		UpdatedBy:          &actorID,
 	}
 	applyDonationTypeRules(item)
 	return s.Repo.Create(ctx, item)
@@ -36,7 +38,7 @@ func (s *Service) GetByID(ctx context.Context, id int) (*Donation, error) {
 	return s.Repo.GetByID(ctx, id)
 }
 
-func (s *Service) Update(ctx context.Context, id int, req UpdateRequest) (*Donation, error) {
+func (s *Service) Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Donation, error) {
 	otherItems := req.OtherItems
 	item := &Donation{
 		ID:                 id,
@@ -48,6 +50,7 @@ func (s *Service) Update(ctx context.Context, id int, req UpdateRequest) (*Donat
 		Currency:           req.Currency,
 		Amount:             req.Amount,
 		OtherItems:         &otherItems,
+		UpdatedBy:          &actorID,
 	}
 	applyDonationTypeRules(item)
 	return s.Repo.Update(ctx, item)

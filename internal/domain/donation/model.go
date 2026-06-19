@@ -24,8 +24,10 @@ type Donation struct {
 	Amount             float64        `json:"amount"`
 	OtherItems         *string        `json:"other_items"` // NULL for money donations (type 0)
 	ImportBatchID      *string        `json:"import_batch_id,omitempty"`
-	CreatedAt          time.Time      `json:"created_at"`
-	UpdatedAt          time.Time      `json:"updated_at"`
+	CreatedBy          *int           `json:"created_by,omitempty"`
+	UpdatedBy          *int           `json:"updated_by,omitempty"`
+	CreatedAt          time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt          time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedBy          *int           `json:"deleted_by,omitempty"`
 	DeletedAt          gorm.DeletedAt `json:"-"` // enables GORM soft delete + auto query filtering
 	// Resolved references (read-only enrichment, populated in the repository --

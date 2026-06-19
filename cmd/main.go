@@ -16,6 +16,7 @@ import (
 	"social-be/internal/domain/attributevolunteer"
 	"social-be/internal/domain/auth"
 	"social-be/internal/domain/categoryactivity"
+	"social-be/internal/domain/dashboard"
 	"social-be/internal/domain/donation"
 	"social-be/internal/domain/email"
 	"social-be/internal/domain/event"
@@ -104,6 +105,10 @@ func main() {
 	donationImportService := donation.NewImportService(donationRepo)
 	donationHistoryService := donation.NewImportHistoryService(donationRepo)
 	donationHandler := donation.NewHandler(donationService, donationImportService, donationHistoryService)
+
+	dashboardRepo := dashboard.NewGormRepository(db)
+	dashboardService := dashboard.NewService(dashboardRepo)
+	dashboardHandler := dashboard.NewHandler(dashboardService)
 
 	emailService := email.NewService()
 	userService := &user.Service{Repo: userRepo}
@@ -363,6 +368,9 @@ func main() {
 	donations.GET("imports/:batch_id/rollback", adminOnly, donationHandler.GetImportRollback)
 	donations.PUT(":id", donationHandler.Update)
 	donations.DELETE(":id", donationHandler.Delete)
+
+	dashboardGroup := protected.Group("/dashboard")
+	dashboardGroup.GET("/summary", dashboardHandler.GetSummary)
 
 	speaks := protected.Group("/speaks")
 	speaks.GET("", speakHandler.GetAll)

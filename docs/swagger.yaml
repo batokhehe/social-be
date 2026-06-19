@@ -93,6 +93,8 @@ definitions:
   donation.CreateRequest:
     properties:
       amount:
+        description: required for money; forced to 0 for goods
+        minimum: 0
         type: number
       area_id:
         minimum: 1
@@ -110,11 +112,16 @@ definitions:
         minimum: 1
         type: integer
       other_items:
+        description: required for goods; nulled for money
         maxLength: 500
         type: string
+      type:
+        description: 0 = money, 1 = goods
+        enum:
+        - 0
+        - 1
+        type: integer
     required:
-    - amount
-    - area_id
     - currency
     - donation_category_id
     - donatur_group_id
@@ -123,6 +130,8 @@ definitions:
   donation.UpdateRequest:
     properties:
       amount:
+        description: required for money; forced to 0 for goods
+        minimum: 0
         type: number
       area_id:
         minimum: 1
@@ -140,11 +149,16 @@ definitions:
         minimum: 1
         type: integer
       other_items:
+        description: required for goods; nulled for money
         maxLength: 500
         type: string
+      type:
+        description: 0 = money, 1 = goods
+        enum:
+        - 0
+        - 1
+        type: integer
     required:
-    - amount
-    - area_id
     - currency
     - donation_category_id
     - donatur_group_id
@@ -451,7 +465,6 @@ definitions:
     required:
     - id_donatur
     - name
-    - telepon
     type: object
   masterdonatur.UpdateRequest:
     properties:
@@ -480,7 +493,6 @@ definitions:
     required:
     - id_donatur
     - name
-    - telepon
     type: object
   masterdonaturgroup.CreateRequest:
     properties:
@@ -490,9 +502,6 @@ definitions:
       name:
         maxLength: 100
         type: string
-      volunteer_id:
-        maxLength: 100
-        type: string
       pic_phone:
         maxLength: 20
         type: string
@@ -501,11 +510,14 @@ definitions:
         - active
         - inactive
         type: string
+      volunteer_id:
+        maxLength: 100
+        type: string
     required:
     - id_group_donatur
     - name
-    - volunteer_id
     - pic_phone
+    - volunteer_id
     type: object
   masterdonaturgroup.UpdateRequest:
     properties:
@@ -515,9 +527,6 @@ definitions:
       name:
         maxLength: 100
         type: string
-      volunteer_id:
-        maxLength: 100
-        type: string
       pic_phone:
         maxLength: 20
         type: string
@@ -526,11 +535,14 @@ definitions:
         - active
         - inactive
         type: string
+      volunteer_id:
+        maxLength: 100
+        type: string
     required:
     - id_group_donatur
     - name
-    - volunteer_id
     - pic_phone
+    - volunteer_id
     type: object
   religion.CreateRequest:
     properties:
@@ -948,9 +960,32 @@ paths:
       summary: Create user
       tags:
       - users
+  /dashboard/summary:
+    get:
+      description: 'Returns dashboard KPI cards: total money donation, active donors
+        and active volunteers (current vs previous month with percentage), plus the
+        upcoming active event count.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dashboard summary KPIs
+      tags:
+      - dashboard
   /donations:
     get:
-      description: Get list of donations
+      description: Get list of donations, optionally filtered by type (0=money, 1=goods)
+      parameters:
+      - description: 'Filter by donation type: 0 = money, 1 = goods'
+        in: query
+        name: type
+        type: integer
       produces:
       - application/json
       responses:
@@ -1058,6 +1093,224 @@ paths:
       security:
       - BearerAuth: []
       summary: Update donation
+      tags:
+      - donation
+  /donations/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Upload an Excel (.xlsx) file of donation records. Each row is
+        validated and created independently; one bad row does not stop the rest.
+        Use dry_run=true to validate without writing any data.
+      parameters:
+      - description: Excel file (.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Validate only, do not insert
+        in: query
+        name: dry_run
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import donations from Excel
+      tags:
+      - donation
+  /donations/import/{batch_id}:
+    delete:
+      description: Delete every donation created by a given import batch.
+      parameters:
+      - description: Import batch id
+        in: path
+        name: batch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Rollback an import batch
+      tags:
+      - donation
+  /donations/imports:
+    get:
+      description: Filtered, sorted, paginated import history (SuperAdmin/Admin).
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: Sort column
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      - description: Filter by batch id
+        in: query
+        name: batch_id
+        type: string
+      - description: Filter by filename (partial)
+        in: query
+        name: filename
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Filter by uploader user id
+        in: query
+        name: uploaded_by
+        type: integer
+      - description: Filter by period
+        in: query
+        name: period
+        type: string
+      - description: Uploaded from (date)
+        in: query
+        name: uploaded_at_from
+        type: string
+      - description: Uploaded to (date)
+        in: query
+        name: uploaded_at_to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List import history
+      tags:
+      - donation
+  /donations/imports/{batch_id}:
+    get:
+      parameters:
+      - description: Import batch id
+        in: path
+        name: batch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get import detail
+      tags:
+      - donation
+  /donations/imports/{batch_id}/donations:
+    get:
+      parameters:
+      - description: Import batch id
+        in: path
+        name: batch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get donations created by an import batch
+      tags:
+      - donation
+  /donations/imports/{batch_id}/errors:
+    get:
+      parameters:
+      - description: Import batch id
+        in: path
+        name: batch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get failed rows for an import batch
+      tags:
+      - donation
+  /donations/imports/{batch_id}/errors/export:
+    get:
+      parameters:
+      - description: Import batch id
+        in: path
+        name: batch_id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Download the error report (.xlsx) for an import batch
+      tags:
+      - donation
+  /donations/imports/{batch_id}/rollback:
+    get:
+      parameters:
+      - description: Import batch id
+        in: path
+        name: batch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get rollback info for an import batch
       tags:
       - donation
   /email/test:
@@ -2643,6 +2896,14 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Filter by district
+        in: query
+        name: district
+        type: string
+      - description: Search by name or vis_id
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -2750,6 +3011,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Update volunteer
+      tags:
+      - volunteer
+  /master/volunteers/districts:
+    get:
+      description: Get the list of distinct district values across volunteers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get distinct volunteer districts
+      tags:
+      - volunteer
+  /master/volunteers/select:
+    get:
+      description: Get paginated list of volunteer with selected fields
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get selected volunteer fields
       tags:
       - volunteer
   /register:
@@ -2948,6 +3250,34 @@ paths:
       summary: Get speak attachments
       tags:
       - speaks
+  /speaks/{id}/attachments/{attachmentId}:
+    delete:
+      description: Soft delete an attachment of a speak
+      parameters:
+      - description: Speak ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Attachment ID
+        in: path
+        name: attachmentId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete speak attachment
+      tags:
+      - speaks
+  /speaks/{id}/attachments/{type}:
     post:
       consumes:
       - multipart/form-data
@@ -2956,6 +3286,11 @@ paths:
       - description: Speak ID
         in: path
         name: id
+        required: true
+        type: integer
+      - description: 'Attachment type: 0 = reporter, 1 = respondent'
+        in: path
+        name: type
         required: true
         type: integer
       - description: Attachment file
@@ -2974,6 +3309,56 @@ paths:
       security:
       - BearerAuth: []
       summary: Upload speak attachment
+      tags:
+      - speaks
+  /speaks/reporter:
+    get:
+      description: Get paginated list of speaks as Reporter
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all as Reporter speaks
+      tags:
+      - speaks
+  /speaks/respondent:
+    get:
+      description: Get paginated list of speaks as Respondent
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all as Respondent speaks
       tags:
       - speaks
   /users:

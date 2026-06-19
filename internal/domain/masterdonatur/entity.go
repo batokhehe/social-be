@@ -10,7 +10,7 @@ type MasterDonatur struct {
 	Name           string            `json:"name"`
 	Status         string            `json:"status"`
 	Volunteer      *DonaturVolunteer `json:"volunteer"`      // resolved from id_vis_volunteer -> volunteers.id; null if unset/not found
-	DonaturGroup   *DonaturGroupInfo `json:"donatur_group"`  // resolved from id_group_donatur -> master_donatur_groups.id; null if unset/not found
+	DonaturGroup   *DonaturGroupInfo `json:"group_donatur"`  // resolved from id_group_donatur -> master_donatur_groups.id; null if unset/not found
 	CreatedBy      *int              `json:"created_by,omitempty"`
 	UpdatedBy      *int              `json:"updated_by,omitempty"`
 	DeletedBy      *int              `json:"deleted_by,omitempty"`

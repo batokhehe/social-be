@@ -55,6 +55,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/dashboard/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns dashboard KPI cards: total money donation, active donors and active volunteers (current vs previous month with percentage), plus the upcoming active event count.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Dashboard summary KPIs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/donations": {
             "get": {
                 "security": [
@@ -62,7 +88,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get list of donations",
+                "description": "Get list of donations, optionally filtered by type (0=money, 1=goods)",
                 "produces": [
                     "application/json"
                 ],
@@ -70,6 +96,14 @@ const docTemplate = `{
                     "donation"
                 ],
                 "summary": "Get all donations",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by donation type: 0 = money, 1 = goods",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -106,6 +140,348 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/donation.CreateRequest"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload an Excel (.xlsx) file of donation records. Each row is\nvalidated and created independently; one bad row does not stop the rest.\nUse dry_run=true to validate without writing any data.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Import donations from Excel",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel file (.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Validate only, do not insert",
+                        "name": "dry_run",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/import/{batch_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete every donation created by a given import batch.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Rollback an import batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Import batch id",
+                        "name": "batch_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/imports": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Filtered, sorted, paginated import history (SuperAdmin/Admin).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "List import history",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort column",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by batch id",
+                        "name": "batch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by filename (partial)",
+                        "name": "filename",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by uploader user id",
+                        "name": "uploaded_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by period",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Uploaded from (date)",
+                        "name": "uploaded_at_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Uploaded to (date)",
+                        "name": "uploaded_at_to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/imports/{batch_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get import detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Import batch id",
+                        "name": "batch_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/imports/{batch_id}/donations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get donations created by an import batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Import batch id",
+                        "name": "batch_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/imports/{batch_id}/errors": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get failed rows for an import batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Import batch id",
+                        "name": "batch_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/imports/{batch_id}/errors/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Download the error report (.xlsx) for an import batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Import batch id",
+                        "name": "batch_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/donations/imports/{batch_id}/rollback": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "donation"
+                ],
+                "summary": "Get rollback info for an import batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Import batch id",
+                        "name": "batch_id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2740,6 +3116,18 @@ const docTemplate = `{
                         "description": "Page size",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by district",
+                        "name": "district",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name or vis_id",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2778,6 +3166,72 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/volunteer.CreateRequest"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/volunteers/districts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the list of distinct district values across volunteers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volunteer"
+                ],
+                "summary": "Get distinct volunteer districts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/master/volunteers/select": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of volunteer with selected fields",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volunteer"
+                ],
+                "summary": "Get selected volunteer fields",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3017,6 +3471,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/speaks/reporter": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of speaks as Reporter",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Get all as Reporter speaks",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/speaks/respondent": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of speaks as Respondent",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Get all as Respondent speaks",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/speaks/{id}": {
             "get": {
                 "security": [
@@ -3210,7 +3744,51 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/speaks/{id}/attachments/{attachmentId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete an attachment of a speak",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "speaks"
+                ],
+                "summary": "Delete speak attachment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Speak ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Attachment ID",
+                        "name": "attachmentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/speaks/{id}/attachments/{type}": {
             "post": {
                 "security": [
                     {
@@ -3233,6 +3811,13 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Speak ID",
                         "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Attachment type: 0 = reporter, 1 = respondent",
+                        "name": "type",
                         "in": "path",
                         "required": true
                     },
@@ -3515,8 +4100,6 @@ const docTemplate = `{
         "donation.CreateRequest": {
             "type": "object",
             "required": [
-                "amount",
-                "area_id",
                 "currency",
                 "donation_category_id",
                 "donatur_group_id",
@@ -3524,7 +4107,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "description": "required for money; forced to 0 for goods",
+                    "type": "number",
+                    "minimum": 0
                 },
                 "area_id": {
                     "type": "integer",
@@ -3547,16 +4132,23 @@ const docTemplate = `{
                     "minimum": 1
                 },
                 "other_items": {
+                    "description": "required for goods; nulled for money",
                     "type": "string",
                     "maxLength": 500
+                },
+                "type": {
+                    "description": "0 = money, 1 = goods",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
                 }
             }
         },
         "donation.UpdateRequest": {
             "type": "object",
             "required": [
-                "amount",
-                "area_id",
                 "currency",
                 "donation_category_id",
                 "donatur_group_id",
@@ -3564,7 +4156,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "description": "required for money; forced to 0 for goods",
+                    "type": "number",
+                    "minimum": 0
                 },
                 "area_id": {
                     "type": "integer",
@@ -3587,8 +4181,17 @@ const docTemplate = `{
                     "minimum": 1
                 },
                 "other_items": {
+                    "description": "required for goods; nulled for money",
                     "type": "string",
                     "maxLength": 500
+                },
+                "type": {
+                    "description": "0 = money, 1 = goods",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
                 }
             }
         },
@@ -3978,8 +4581,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "id_donatur",
-                "name",
-                "telepon"
+                "name"
             ],
             "properties": {
                 "id_donatur": {
@@ -4018,8 +4620,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "id_donatur",
-                "name",
-                "telepon"
+                "name"
             ],
             "properties": {
                 "id_donatur": {
@@ -4059,8 +4660,8 @@ const docTemplate = `{
             "required": [
                 "id_group_donatur",
                 "name",
-                "volunteer_id",
-                "pic_phone"
+                "pic_phone",
+                "volunteer_id"
             ],
             "properties": {
                 "id_group_donatur": {
@@ -4068,10 +4669,6 @@ const docTemplate = `{
                     "maxLength": 50
                 },
                 "name": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "volunteer_id": {
                     "type": "string",
                     "maxLength": 100
                 },
@@ -4085,6 +4682,10 @@ const docTemplate = `{
                         "active",
                         "inactive"
                     ]
+                },
+                "volunteer_id": {
+                    "type": "string",
+                    "maxLength": 100
                 }
             }
         },
@@ -4093,8 +4694,8 @@ const docTemplate = `{
             "required": [
                 "id_group_donatur",
                 "name",
-                "volunteer_id",
-                "pic_phone"
+                "pic_phone",
+                "volunteer_id"
             ],
             "properties": {
                 "id_group_donatur": {
@@ -4102,10 +4703,6 @@ const docTemplate = `{
                     "maxLength": 50
                 },
                 "name": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "volunteer_id": {
                     "type": "string",
                     "maxLength": 100
                 },
@@ -4119,6 +4716,10 @@ const docTemplate = `{
                         "active",
                         "inactive"
                     ]
+                },
+                "volunteer_id": {
+                    "type": "string",
+                    "maxLength": 100
                 }
             }
         },

@@ -105,7 +105,12 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	donation, err := h.Service.Create(c.Request.Context(), req)
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+
+	donation, err := h.Service.Create(c.Request.Context(), req, actor)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_901", "failed to create donation"))
 		return
@@ -163,7 +168,12 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	donation, err := h.Service.Update(c.Request.Context(), id, req)
+	actor, ok := actorID(c)
+	if !ok {
+		return
+	}
+
+	donation, err := h.Service.Update(c.Request.Context(), id, req, actor)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_903", "failed to update donation"))
 		return
