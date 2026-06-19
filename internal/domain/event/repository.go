@@ -717,13 +717,19 @@ func (r *GormRepository) loadAttendanceByVolunteer(
 
 	var row eventAttendanceModel
 
-	if err := r.DB.WithContext(ctx).
+	err := r.DB.WithContext(ctx).
 		Where(
 			"event_id = ? AND volunteer_id = ? AND deleted_at IS NULL",
 			event.ID,
 			volunteerID,
 		).
-		Take(&row).Error; err != nil {
+		Take(&row).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			event.Attendances = nil
+			return nil
+		}
 		return fmt.Errorf("failed get event attendance: %w", err)
 	}
 
