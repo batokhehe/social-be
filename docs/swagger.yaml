@@ -960,6 +960,42 @@ paths:
       summary: Create user
       tags:
       - users
+  /dashboard/donations-by-category:
+    get:
+      description: Returns current-month money donations grouped by donation category,
+        each with its summed amount, plus the grand total. Percentages are left to
+        the frontend. Intended for a pie chart.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Donations by category (pie chart)
+      tags:
+      - dashboard
+  /dashboard/home:
+    get:
+      description: 'Returns homepage widgets: ongoing activities, latest donations,
+        top volunteers (by contribution hours), and the impact summary (active volunteers,
+        and completed activities = events whose end_at is in the past).'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dashboard homepage widgets
+      tags:
+      - dashboard
   /dashboard/summary:
     get:
       description: 'Returns dashboard KPI cards: total money donation, active donors

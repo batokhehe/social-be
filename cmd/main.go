@@ -371,6 +371,8 @@ func main() {
 
 	dashboardGroup := protected.Group("/dashboard")
 	dashboardGroup.GET("/summary", dashboardHandler.GetSummary)
+	dashboardGroup.GET("/home", dashboardHandler.GetHome)
+	dashboardGroup.GET("/donations-by-category", dashboardHandler.GetDonationsByCategory)
 
 	speaks := protected.Group("/speaks")
 	speaks.GET("", speakHandler.GetAll)

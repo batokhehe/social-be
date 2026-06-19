@@ -190,7 +190,7 @@ func (r *GormRepository) GetSelect(ctx context.Context) ([]Volunteer, int64, err
 		return nil, 0, err
 	}
 	var rows []volunteerModel
-	if err := baseQuery.Select("id", "vis_id", "indonesian_name").Order("id DESC").Find(&rows).Error; err != nil {
+	if err := baseQuery.Order("id DESC").Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
 	items := make([]Volunteer, 0, len(rows))
