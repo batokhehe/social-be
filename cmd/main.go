@@ -28,6 +28,7 @@ import (
 	"social-be/internal/domain/masterdonationcategory"
 	"social-be/internal/domain/masterdonatur"
 	"social-be/internal/domain/masterdonaturgroup"
+	"social-be/internal/domain/masterexpensecategory"
 	"social-be/internal/domain/religion"
 	"social-be/internal/domain/speak"
 	"social-be/internal/domain/user"
@@ -120,6 +121,10 @@ func main() {
 	expenseRepo := expense.NewGormRepository(db, logger.Log)
 	expenseService := expense.NewService(expenseRepo)
 	expenseHandler := expense.NewHandler(expenseService)
+
+	masterExpenseCategoryRepo := masterexpensecategory.NewGormRepository(db, logger.Log)
+	masterExpenseCategoryService := masterexpensecategory.NewService(masterExpenseCategoryRepo)
+	masterExpenseCategoryHandler := masterexpensecategory.NewHandler(masterExpenseCategoryService)
 
 	emailService := email.NewService()
 	userService := &user.Service{Repo: userRepo}
@@ -394,7 +399,16 @@ func main() {
 	expenses.GET(":id", expenseHandler.GetByID)
 	expenses.POST("", expenseHandler.Create)
 	expenses.PUT(":id", expenseHandler.Update)
-	expenses.DELETE(":id", expenseHandler.Delete)
+	// Deleting a financial record is admin/superadmin only.
+	expenses.DELETE(":id", adminOnly, expenseHandler.Delete)
+
+	masterExpenseCategories := protected.Group("/master-expense-categories")
+	masterExpenseCategories.GET("", masterExpenseCategoryHandler.GetAll)
+	masterExpenseCategories.GET("/select", masterExpenseCategoryHandler.GetSelect)
+	masterExpenseCategories.GET(":id", masterExpenseCategoryHandler.GetByID)
+	masterExpenseCategories.POST("", masterExpenseCategoryHandler.Create)
+	masterExpenseCategories.PUT(":id", masterExpenseCategoryHandler.Update)
+	masterExpenseCategories.DELETE(":id", masterExpenseCategoryHandler.Delete)
 
 	speaks := protected.Group("/speaks")
 	speaks.GET("", speakHandler.GetAll)

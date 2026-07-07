@@ -173,7 +173,7 @@ FROM master_donaturs md
 JOIN master_donatur_groups mg ON mg.id = md.id_group_donatur
 WHERE md.deleted_at IS NULL
     AND mg.deleted_at IS NULL
-    AND btrim(mg.volunteer_id) IN ?
+    AND mg.volunteer_id IN ?
     AND md.created_at >= ? AND md.created_at < ?`
 
 	var count int64
@@ -197,7 +197,7 @@ WHERE d.deleted_at IS NULL
         JOIN master_donatur_groups mg ON mg.id = md.id_group_donatur
         WHERE md.deleted_at IS NULL
             AND mg.deleted_at IS NULL
-            AND btrim(mg.volunteer_id) IN ?
+            AND mg.volunteer_id IN ?
     )`
 
 	var sum float64

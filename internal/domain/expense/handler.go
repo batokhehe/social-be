@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"social-be/internal/pkg/apperror"
+	"social-be/internal/pkg/logger"
 	"social-be/internal/pkg/pagination"
 	"social-be/internal/pkg/query"
 	"social-be/internal/pkg/response"
@@ -74,12 +75,17 @@ func mapExpenseError(c *gin.Context, err error, code, message string) {
 		response.AbortError(c, apperror.New(http.StatusNotFound, "DB_964", "expense not found"))
 	case errors.Is(err, ErrCategoryNotFound):
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "category not found"))
+	case errors.Is(err, ErrCategoryInactive):
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "category is inactive"))
 	case errors.Is(err, ErrVolunteerNotFound):
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "volunteer not found"))
 	case errors.Is(err, ErrInvalidExpenseDate):
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "expense_date is invalid"))
 	default:
-		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, code, message))
+		// Log the real error server-side; return a generic message so raw DB
+		// errors are never exposed to API consumers.
+		logger.FromContext(c.Request.Context()).WithError(err).Error(message)
+		response.AbortError(c, apperror.New(http.StatusInternalServerError, code, message))
 	}
 }
 
@@ -116,7 +122,8 @@ func (h *Handler) GetAll(c *gin.Context) {
 
 	items, meta, err := h.Service.GetPaginated(ctx, page, filters, sort)
 	if err != nil {
-		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_962", "failed to fetch expenses"))
+		logger.FromContext(ctx).WithError(err).Error("failed to fetch expenses")
+		response.AbortError(c, apperror.New(http.StatusInternalServerError, "DB_962", "failed to fetch expenses"))
 		return
 	}
 	response.SuccessWithPagination(c, items, meta)

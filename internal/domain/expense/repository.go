@@ -15,6 +15,7 @@ import (
 
 var (
 	ErrCategoryNotFound   = errors.New("category not found")
+	ErrCategoryInactive   = errors.New("category is inactive")
 	ErrVolunteerNotFound  = errors.New("volunteer not found")
 	ErrExpenseNotFound    = errors.New("expense not found")
 	ErrInvalidExpenseDate = errors.New("expense_date must be a valid date/time")
@@ -27,7 +28,9 @@ type ExpenseSort struct {
 }
 
 func (s ExpenseSort) orderClause() string {
-	return s.Column + " " + s.Order
+	// id tiebreaker keeps ordering stable across pages when the primary column
+	// has duplicate values (e.g. many rows sharing an expense_date).
+	return s.Column + " " + s.Order + ", id " + s.Order
 }
 
 type Repository interface {
@@ -36,10 +39,6 @@ type Repository interface {
 	GetByID(ctx context.Context, id int) (*Expense, error)
 	Update(ctx context.Context, id int, req UpdateRequest, actorID int) (*Expense, error)
 	SoftDelete(ctx context.Context, id int, actorID int) error
-	// PeekNextExpenseNumber returns the number the next expense in expenseDate's
-	// month would receive (preview only; the authoritative number is allocated
-	// atomically inside Create).
-	PeekNextExpenseNumber(ctx context.Context, expenseDate time.Time) (string, error)
 }
 
 type GormRepository struct {
@@ -121,15 +120,20 @@ func nextExpenseNo(tx *gorm.DB, expenseDate time.Time) (string, error) {
 	return buildExpenseNo(expenseDate, maxSeq+1), nil
 }
 
+// ensureCategory requires the category to exist, be live (deleted_at IS NULL)
+// and be active. Inactive/retired categories are not selectable for expenses.
 func ensureCategory(tx *gorm.DB, id int) error {
-	var exists bool
+	var actives []bool
 	if err := tx.Raw(
-		`SELECT EXISTS(SELECT 1 FROM master_expense_categories WHERE id = ? AND deleted_at IS NULL)`, id,
-	).Scan(&exists).Error; err != nil {
+		`SELECT active FROM master_expense_categories WHERE id = ? AND deleted_at IS NULL`, id,
+	).Scan(&actives).Error; err != nil {
 		return err
 	}
-	if !exists {
+	if len(actives) == 0 {
 		return ErrCategoryNotFound
+	}
+	if !actives[0] {
+		return ErrCategoryInactive
 	}
 	return nil
 }
@@ -178,7 +182,7 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 		return nil
 	})
 	if err != nil {
-		if !errors.Is(err, ErrCategoryNotFound) && !errors.Is(err, ErrVolunteerNotFound) {
+		if !errors.Is(err, ErrCategoryNotFound) && !errors.Is(err, ErrCategoryInactive) && !errors.Is(err, ErrVolunteerNotFound) {
 			r.Logger.WithError(err).Error("Create Expense failed")
 		}
 		return nil, err
@@ -234,11 +238,11 @@ func (r *GormRepository) fillListNames(ctx context.Context, rows []expenseModel,
 		volunteerIDs = append(volunteerIDs, row.VolunteerID)
 	}
 
-	categoryNames, err := r.categoryNamesByID(ctx, categoryIDs)
+	categoryNames, err := r.namesByID(ctx, "master_expense_categories", "name", categoryIDs)
 	if err != nil {
 		return err
 	}
-	volunteerNames, err := r.volunteerNamesByID(ctx, volunteerIDs)
+	volunteerNames, err := r.namesByID(ctx, "volunteers", "indonesian_name", volunteerIDs)
 	if err != nil {
 		return err
 	}
@@ -250,38 +254,21 @@ func (r *GormRepository) fillListNames(ctx context.Context, rows []expenseModel,
 	return nil
 }
 
-func (r *GormRepository) categoryNamesByID(ctx context.Context, ids []int) (map[int]string, error) {
+// namesByID resolves id -> display name from a reference table in one query.
+// Soft-deleted rows are intentionally included so a historical expense keeps
+// showing its category/volunteer even after that record is deactivated.
+func (r *GormRepository) namesByID(ctx context.Context, table, nameColumn string, ids []int) (map[int]string, error) {
 	type row struct {
 		ID   int    `gorm:"column:id"`
 		Name string `gorm:"column:name"`
 	}
 	var rows []row
 	if err := r.DB.WithContext(ctx).
-		Table("master_expense_categories").
-		Select("id", "name").
+		Table(table).
+		Select("id", nameColumn+" AS name").
 		Where("id IN ?", ids).
 		Find(&rows).Error; err != nil {
-		return nil, fmt.Errorf("failed load expense categories: %w", err)
-	}
-	out := make(map[int]string, len(rows))
-	for _, x := range rows {
-		out[x.ID] = x.Name
-	}
-	return out, nil
-}
-
-func (r *GormRepository) volunteerNamesByID(ctx context.Context, ids []int) (map[int]string, error) {
-	type row struct {
-		ID   int    `gorm:"column:id"`
-		Name string `gorm:"column:indonesian_name"`
-	}
-	var rows []row
-	if err := r.DB.WithContext(ctx).
-		Table("volunteers").
-		Select("id", "indonesian_name").
-		Where("id IN ? AND deleted_at IS NULL", ids).
-		Find(&rows).Error; err != nil {
-		return nil, fmt.Errorf("failed load expense volunteers: %w", err)
+		return nil, fmt.Errorf("failed load %s names: %w", table, err)
 	}
 	out := make(map[int]string, len(rows))
 	for _, x := range rows {
@@ -330,10 +317,12 @@ func (r *GormRepository) loadCategory(ctx context.Context, item *Expense) error 
 
 func (r *GormRepository) loadVolunteer(ctx context.Context, item *Expense) error {
 	var vol VolunteerInfo
+	// No deleted_at filter (see namesByID): keep resolving the volunteer on a
+	// historical expense even after the volunteer is deactivated.
 	if err := r.DB.WithContext(ctx).
 		Table("volunteers").
 		Select("id", "indonesian_name", "master_area_id").
-		Where("id = ? AND deleted_at IS NULL", item.VolunteerID).
+		Where("id = ?", item.VolunteerID).
 		Take(&vol).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil
@@ -373,24 +362,18 @@ func (r *GormRepository) loadAuditUsers(ctx context.Context, item *Expense, row 
 		byID[u.ID] = u
 	}
 
-	if row.CreatedBy != nil {
-		if u, ok := byID[*row.CreatedBy]; ok {
+	assign := func(actorID *int, dst **UserInfo) {
+		if actorID == nil {
+			return
+		}
+		if u, ok := byID[*actorID]; ok {
 			ref := u
-			item.CreatedBy = &ref
+			*dst = &ref
 		}
 	}
-	if row.UpdatedBy != nil {
-		if u, ok := byID[*row.UpdatedBy]; ok {
-			ref := u
-			item.UpdatedBy = &ref
-		}
-	}
-	if row.DeletedBy != nil {
-		if u, ok := byID[*row.DeletedBy]; ok {
-			ref := u
-			item.DeletedBy = &ref
-		}
-	}
+	assign(row.CreatedBy, &item.CreatedBy)
+	assign(row.UpdatedBy, &item.UpdatedBy)
+	assign(row.DeletedBy, &item.DeletedBy)
 	return nil
 }
 
@@ -448,17 +431,4 @@ func (r *GormRepository) SoftDelete(ctx context.Context, id int, actorID int) er
 		return ErrExpenseNotFound
 	}
 	return nil
-}
-
-func (r *GormRepository) PeekNextExpenseNumber(ctx context.Context, expenseDate time.Time) (string, error) {
-	var expenseNo string
-	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		no, err := nextExpenseNo(tx, expenseDate)
-		if err != nil {
-			return err
-		}
-		expenseNo = no
-		return nil
-	})
-	return expenseNo, err
 }

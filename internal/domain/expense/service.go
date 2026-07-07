@@ -38,13 +38,3 @@ func (s *Service) Update(ctx context.Context, id int, req UpdateRequest, actorID
 func (s *Service) Delete(ctx context.Context, id int, actorID int) error {
 	return s.Repo.SoftDelete(ctx, id, actorID)
 }
-
-// GenerateExpenseNumber previews the next expense number for the given date
-// string. The authoritative number is allocated atomically during Create.
-func (s *Service) GenerateExpenseNumber(ctx context.Context, expenseDate string) (string, error) {
-	t, err := parseExpenseDate(expenseDate)
-	if err != nil {
-		return "", err
-	}
-	return s.Repo.PeekNextExpenseNumber(ctx, t)
-}

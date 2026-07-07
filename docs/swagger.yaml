@@ -598,6 +598,36 @@ definitions:
     - pic_phone
     - volunteer_id
     type: object
+  masterexpensecategory.CreateRequest:
+    properties:
+      active:
+        type: boolean
+      code:
+        maxLength: 30
+        type: string
+      name:
+        maxLength: 100
+        type: string
+    required:
+    - active
+    - code
+    - name
+    type: object
+  masterexpensecategory.UpdateRequest:
+    properties:
+      active:
+        type: boolean
+      code:
+        maxLength: 30
+        type: string
+      name:
+        maxLength: 100
+        type: string
+    required:
+    - active
+    - code
+    - name
+    type: object
   religion.CreateRequest:
     properties:
       description:
@@ -1860,6 +1890,156 @@ paths:
       summary: Login user
       tags:
       - auth
+  /master-expense-categories:
+    get:
+      description: 'Paginated list. Search: code, name. Filter: active. Sort: sort=id|code|name|created_at,
+        order=asc|desc (default created_at desc).'
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: Sort column
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      - description: Filter by active
+        in: query
+        name: active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all expense categories
+      tags:
+      - master-expense-category
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense category (code and name must be unique)
+      parameters:
+      - description: Create expense category
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterexpensecategory.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create expense category
+      tags:
+      - master-expense-category
+  /master-expense-categories/{id}:
+    delete:
+      description: Soft delete an expense category
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete expense category
+      tags:
+      - master-expense-category
+    get:
+      description: Get expense category detail
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get expense category by ID
+      tags:
+      - master-expense-category
+    put:
+      consumes:
+      - application/json
+      description: Update an expense category (code and name must be unique)
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update expense category
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/masterexpensecategory.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update expense category
+      tags:
+      - master-expense-category
+  /master-expense-categories/select:
+    get:
+      description: Returns only active, non-deleted categories (id, code, name)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get active expense categories for dropdown
+      tags:
+      - master-expense-category
   /master/attribute-volunteers:
     get:
       description: Get paginated list of attribute volunteer

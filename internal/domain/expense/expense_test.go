@@ -39,9 +39,6 @@ func (m *mockRepo) Update(ctx context.Context, id int, req UpdateRequest, actorI
 func (m *mockRepo) SoftDelete(ctx context.Context, id int, actorID int) error {
 	return m.deleteFn(ctx, id, actorID)
 }
-func (m *mockRepo) PeekNextExpenseNumber(ctx context.Context, expenseDate time.Time) (string, error) {
-	return "", nil
-}
 
 func newRouter(h *Handler) *gin.Engine {
 	r := gin.New()
@@ -154,6 +151,28 @@ func TestCreate_CategoryNotFound_400(t *testing.T) {
 	w := do(newRouter(h), http.MethodPost, "/expenses", validBody)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for missing category, got %d", w.Code)
+	}
+}
+
+func TestCreate_InactiveCategory_400(t *testing.T) {
+	repo := &mockRepo{createFn: func(ctx context.Context, req CreateRequest, actorID int) (*Expense, error) {
+		return nil, ErrCategoryInactive
+	}}
+	h := &Handler{Service: NewService(repo)}
+	w := do(newRouter(h), http.MethodPost, "/expenses", validBody)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for inactive category, got %d", w.Code)
+	}
+}
+
+func TestUpdate_InactiveCategory_400(t *testing.T) {
+	repo := &mockRepo{updateFn: func(ctx context.Context, id int, req UpdateRequest, actorID int) (*Expense, error) {
+		return nil, ErrCategoryInactive
+	}}
+	h := &Handler{Service: NewService(repo)}
+	w := do(newRouter(h), http.MethodPut, "/expenses/5", validBody)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for inactive category on update, got %d", w.Code)
 	}
 }
 
