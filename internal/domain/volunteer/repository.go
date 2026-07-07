@@ -70,6 +70,10 @@ type volunteerModel struct {
 	Languages            string     `gorm:"column:languages"`
 	PrivateVehicle       bool       `gorm:"column:private_vehicle"`
 	RegularDonor         bool       `gorm:"column:regular_donor"`
+	IsHuAiLeader         *bool      `gorm:"column:is_hu_ai_leader"`
+	IsHuAiDeputy         *bool      `gorm:"column:is_hu_ai_deputy"`
+	IsXieLiLeader        *bool      `gorm:"column:is_xie_li_leader"`
+	IsXieLiDeputy        *bool      `gorm:"column:is_xie_li_deputy"`
 	Status               string     `gorm:"column:status"`
 	CreatedBy            *int       `gorm:"column:created_by"`
 	UpdatedBy            *int       `gorm:"column:updated_by"`
@@ -468,7 +472,10 @@ func toEntity(row volunteerModel) Volunteer {
 		Profession: row.Profession, Field: row.Field, ResidentialAddress: row.ResidentialAddress,
 		KTPAddress: row.KTPAddress, District: row.District, PostalCode: row.PostalCode,
 		HomePhone: row.HomePhone, OfficePhone: row.OfficePhone, Phone: row.Phone, Email: row.Email, Languages: row.Languages,
-		PrivateVehicle: row.PrivateVehicle, RegularDonor: row.RegularDonor, Status: row.Status,
+		PrivateVehicle: row.PrivateVehicle, RegularDonor: row.RegularDonor,
+		IsHuAiLeader: row.IsHuAiLeader, IsHuAiDeputy: row.IsHuAiDeputy,
+		IsXieLiLeader: row.IsXieLiLeader, IsXieLiDeputy: row.IsXieLiDeputy,
+		Status:    row.Status,
 		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, DeletedBy: row.DeletedBy,
 	}
 }

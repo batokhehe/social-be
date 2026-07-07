@@ -2,15 +2,18 @@ package dashboard
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
 
 type mockRepo struct {
-	donation   AmountPair
-	donors     CountPair
-	volunteers CountPair
-	upcoming   int64
+	donation    AmountPair
+	expense     AmountPair
+	donors      CountPair
+	volunteers  CountPair
+	upcoming    int64
+	expenseRows []monthlyExpenseRow
 
 	// home widgets
 	ongoing    []OngoingActivity
@@ -25,6 +28,26 @@ type mockRepo struct {
 	gotOngoingNow             time.Time
 	gotImpactNow              time.Time
 	gotCatCurr, gotCatNext    time.Time
+
+	// volunteer dashboard
+	volunteerID          int
+	volunteerErr         error
+	activityRows         []monthlyActivityRow
+	donationRows         []monthlyDonationRow
+	donorRows            []monthlyDonorRow
+	donorCount           int64
+	gotUserID            int
+	gotVolID             int
+	gotVolKey            string
+	gotActFrom, gotActTo time.Time
+}
+
+func (m *mockRepo) ExpenseTotals(ctx context.Context, prevStart, currStart, nextStart time.Time) (AmountPair, error) {
+	return m.expense, nil
+}
+
+func (m *mockRepo) MonthlyExpenseStats(ctx context.Context, volunteerID int, from, to time.Time) ([]monthlyExpenseRow, error) {
+	return m.expenseRows, nil
 }
 
 func (m *mockRepo) DonationTotals(ctx context.Context, prevStart, currStart, nextStart time.Time) (AmountPair, error) {
@@ -58,7 +81,7 @@ func (m *mockRepo) TopVolunteers(ctx context.Context) ([]TopVolunteer, error) {
 	return m.top, nil
 }
 
-func (m *mockRepo) ImpactSummary(ctx context.Context, now time.Time) (ImpactSummary, error) {
+func (m *mockRepo) ImpactSummary(ctx context.Context, now, currStart, nextStart time.Time) (ImpactSummary, error) {
 	m.gotImpactNow = now
 	return m.impact, nil
 }
@@ -68,9 +91,36 @@ func (m *mockRepo) DonationsByCategory(ctx context.Context, currStart, nextStart
 	return m.byCategory, nil
 }
 
+func (m *mockRepo) ResolveVolunteerID(ctx context.Context, userID int) (int, error) {
+	m.gotUserID = userID
+	if m.volunteerErr != nil {
+		return 0, m.volunteerErr
+	}
+	return m.volunteerID, nil
+}
+
+func (m *mockRepo) MonthlyActivityStats(ctx context.Context, volunteerID int, from, to time.Time) ([]monthlyActivityRow, error) {
+	m.gotVolID, m.gotActFrom, m.gotActTo = volunteerID, from, to
+	return m.activityRows, nil
+}
+
+func (m *mockRepo) MonthlyDonationStats(ctx context.Context, volunteerKey string, from, to time.Time) ([]monthlyDonationRow, error) {
+	m.gotVolKey = volunteerKey
+	return m.donationRows, nil
+}
+
+func (m *mockRepo) CountMyDonors(ctx context.Context, volunteerKey string) (int64, error) {
+	return m.donorCount, nil
+}
+
+func (m *mockRepo) MonthlyDonorCounts(ctx context.Context, volunteerKey string, from, to time.Time) ([]monthlyDonorRow, error) {
+	return m.donorRows, nil
+}
+
 func TestGetSummary(t *testing.T) {
 	repo := &mockRepo{
 		donation:   AmountPair{Current: 150, Previous: 100}, // +50%
+		expense:    AmountPair{Current: 40, Previous: 50},   // -20%
 		donors:     CountPair{Current: 110, Previous: 100},  // +10%
 		volunteers: CountPair{Current: 90, Previous: 100},   // -10%
 		upcoming:   4,
@@ -85,6 +135,9 @@ func TestGetSummary(t *testing.T) {
 
 	if got.TotalDonation.Current != 150 || got.TotalDonation.Previous != 100 || got.TotalDonation.Percentage != 50 {
 		t.Fatalf("total_donation = %+v, want {150 100 50}", got.TotalDonation)
+	}
+	if got.TotalExpense.Current != 40 || got.TotalExpense.Previous != 50 || got.TotalExpense.Percentage != -20 {
+		t.Fatalf("total_expense = %+v, want {40 50 -20}", got.TotalExpense)
 	}
 	if got.ActiveDonors.Percentage != 10 {
 		t.Fatalf("active_donors percentage = %v, want 10", got.ActiveDonors.Percentage)
@@ -121,7 +174,7 @@ func TestGetHome(t *testing.T) {
 		top: []TopVolunteer{
 			{VolunteerID: 1, Name: "Rangga R", TotalHours: 48},
 		},
-		impact: ImpactSummary{ActiveVolunteers: 4, CompletedActivities: 15},
+		impact: ImpactSummary{ActiveVolunteers: 4, CompletedActivities: 15, CurrentMonthExpense: 750000},
 	}
 	svc := &Service{Repo: repo, now: func() time.Time { return fixed }}
 
@@ -139,7 +192,7 @@ func TestGetHome(t *testing.T) {
 	if len(got.TopVolunteers) != 1 || got.TopVolunteers[0].TotalHours != 48 {
 		t.Fatalf("top_volunteers = %+v", got.TopVolunteers)
 	}
-	if got.ImpactSummary.ActiveVolunteers != 4 || got.ImpactSummary.CompletedActivities != 15 {
+	if got.ImpactSummary.ActiveVolunteers != 4 || got.ImpactSummary.CompletedActivities != 15 || got.ImpactSummary.CurrentMonthExpense != 750000 {
 		t.Fatalf("impact_summary = %+v", got.ImpactSummary)
 	}
 	if !repo.gotOngoingNow.Equal(fixed) {
@@ -216,6 +269,97 @@ func TestGetDonationsByCategory_EmptySerializesAsArray(t *testing.T) {
 	}
 	if got.TotalAmount != 0 || len(got.Categories) != 0 {
 		t.Fatalf("expected empty pie, got %+v", got)
+	}
+}
+
+func TestGetVolunteerDashboard(t *testing.T) {
+	repo := &mockRepo{
+		volunteerID: 7,
+		donorCount:  12,
+		activityRows: []monthlyActivityRow{
+			{YM: "2026-06", ActivityHours: 42.5, PhilosophyHours: 8, MissionHours: 4}, // current
+			{YM: "2026-04", ActivityHours: 10},                                        // older
+		},
+		donationRows: []monthlyDonationRow{
+			{YM: "2026-06", MyDonation: 2500000, CollectedDonation: 8000000}, // current
+		},
+		donorRows: []monthlyDonorRow{
+			{YM: "2026-06", DonorCount: 3},
+			{YM: "2026-04", DonorCount: 1},
+		},
+		expenseRows: []monthlyExpenseRow{
+			{YM: "2026-06", ExpenseAmount: 320000},
+			{YM: "2026-04", ExpenseAmount: 90000},
+		},
+	}
+	fixed := time.Date(2026, time.June, 15, 9, 0, 0, 0, time.UTC)
+	svc := &Service{Repo: repo, now: func() time.Time { return fixed }}
+
+	got, err := svc.GetVolunteerDashboard(context.Background(), 99)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Identity comes from the resolved volunteer; donor/group key is the id as text.
+	if repo.gotUserID != 99 || repo.gotVolID != 7 || repo.gotVolKey != "7" {
+		t.Fatalf("identity wiring wrong: userID=%d volID=%d volKey=%q", repo.gotUserID, repo.gotVolID, repo.gotVolKey)
+	}
+
+	// Cards = current month (June) bucket.
+	if got.TotalActivityHours != 42.5 || got.PhilosophyHours != 8 || got.MissionHours != 4 {
+		t.Fatalf("hour cards wrong: %+v", got)
+	}
+	if got.TotalDonors != 12 {
+		t.Fatalf("total_donors = %d, want 12", got.TotalDonors)
+	}
+	if got.TotalMyDonation != 2500000 || got.TotalCollectedDonation != 8000000 {
+		t.Fatalf("donation cards wrong: my=%v collected=%v", got.TotalMyDonation, got.TotalCollectedDonation)
+	}
+	if got.TotalMyExpense != 320000 {
+		t.Fatalf("total_my_expense = %v, want 320000", got.TotalMyExpense)
+	}
+	if got.MonthlyChart[5].ExpenseAmount != 320000 || got.MonthlyChart[3].ExpenseAmount != 90000 {
+		t.Fatalf("chart expense: jun=%v apr=%v", got.MonthlyChart[5].ExpenseAmount, got.MonthlyChart[3].ExpenseAmount)
+	}
+
+	// 6-month chart, oldest first: Jan..Jun.
+	if len(got.MonthlyChart) != 6 {
+		t.Fatalf("chart len = %d, want 6", len(got.MonthlyChart))
+	}
+	wantMonths := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"}
+	for i, m := range wantMonths {
+		if got.MonthlyChart[i].Month != m {
+			t.Fatalf("chart[%d].month = %q, want %q", i, got.MonthlyChart[i].Month, m)
+		}
+	}
+	// April had activity + 1 donor, but no donations -> partial fill.
+	if got.MonthlyChart[3].ActivityHours != 10 || got.MonthlyChart[3].MyDonation != 0 || got.MonthlyChart[3].DonorCount != 1 {
+		t.Fatalf("April bucket wrong: %+v", got.MonthlyChart[3])
+	}
+	// Missing month (Feb) -> zero-filled.
+	if got.MonthlyChart[1].ActivityHours != 0 || got.MonthlyChart[1].CollectedDonation != 0 || got.MonthlyChart[1].DonorCount != 0 {
+		t.Fatalf("Feb bucket should be zero: %+v", got.MonthlyChart[1])
+	}
+	// June bucket matches the cards + donor_count.
+	if got.MonthlyChart[5].ActivityHours != 42.5 || got.MonthlyChart[5].CollectedDonation != 8000000 || got.MonthlyChart[5].DonorCount != 3 {
+		t.Fatalf("June bucket wrong: %+v", got.MonthlyChart[5])
+	}
+
+	// 6-month window passed to the repo: [2026-01-01, 2026-07-01).
+	wantFrom := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	wantTo := time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
+	if !repo.gotActFrom.Equal(wantFrom) || !repo.gotActTo.Equal(wantTo) {
+		t.Fatalf("window: from=%v to=%v; want from=%v to=%v", repo.gotActFrom, repo.gotActTo, wantFrom, wantTo)
+	}
+}
+
+func TestGetVolunteerDashboard_NotAVolunteer(t *testing.T) {
+	repo := &mockRepo{volunteerErr: ErrVolunteerNotFound}
+	svc := &Service{Repo: repo, now: time.Now}
+
+	_, err := svc.GetVolunteerDashboard(context.Background(), 1)
+	if !errors.Is(err, ErrVolunteerNotFound) {
+		t.Fatalf("expected ErrVolunteerNotFound, got %v", err)
 	}
 }
 

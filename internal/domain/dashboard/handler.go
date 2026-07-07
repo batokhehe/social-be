@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"errors"
 	"net/http"
 
 	"social-be/internal/pkg/apperror"
@@ -69,4 +70,42 @@ func (h *Handler) GetDonationsByCategory(c *gin.Context) {
 	}
 
 	response.Success(c, data)
+}
+
+// GetVolunteerDashboard godoc
+// @Summary Personal volunteer dashboard
+// @Description Statistics for the authenticated volunteer: current-month KPI cards (activity/philosophy/mission hours, my donors, my donations, collected donations) plus a 6-month chart. Volunteer identity is taken from the JWT, never from query params.
+// @Tags dashboard
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /dashboard/volunteer [get]
+func (h *Handler) GetVolunteerDashboard(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		response.AbortError(c, apperror.New(http.StatusUnauthorized, apperror.CodeActorNotFound, "user not found"))
+		return
+	}
+
+	data, err := h.Service.GetVolunteerDashboard(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, ErrVolunteerNotFound) {
+			response.AbortError(c, apperror.New(http.StatusNotFound, apperror.CodeActorNotFound, "volunteer profile not found"))
+			return
+		}
+		response.AbortError(c, apperror.Wrap(err, http.StatusInternalServerError, "DB_953", "failed to fetch volunteer dashboard"))
+		return
+	}
+
+	response.Success(c, data)
+}
+
+// currentUserID extracts the authenticated user id set by AuthMiddleware.
+func currentUserID(c *gin.Context) (int, bool) {
+	value, ok := c.Get("user_id")
+	if !ok {
+		return 0, false
+	}
+	id, ok := value.(int)
+	return id, ok
 }

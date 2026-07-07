@@ -18,6 +18,7 @@ type UpcomingEventsCard struct {
 // SummaryResponse is the payload for GET /dashboard/summary.
 type SummaryResponse struct {
 	TotalDonation    MetricCard         `json:"total_donation"`
+	TotalExpense     MetricCard         `json:"total_expense"`
 	ActiveDonors     MetricCard         `json:"active_donors"`
 	ActiveVolunteers MetricCard         `json:"active_volunteers"`
 	UpcomingEvents   UpcomingEventsCard `json:"upcoming_events"`
@@ -56,8 +57,9 @@ type TopVolunteer struct {
 //     and not soft-deleted. Completion is derived from the schedule because the
 //     event lifecycle only uses status 'active'/'inactive' (never 'completed').
 type ImpactSummary struct {
-	ActiveVolunteers    int64 `json:"active_volunteers"`
-	CompletedActivities int64 `json:"completed_activities"`
+	ActiveVolunteers    int64   `json:"active_volunteers"`
+	CompletedActivities int64   `json:"completed_activities"`
+	CurrentMonthExpense float64 `json:"current_month_expense"`
 }
 
 // HomeResponse is the payload for GET /dashboard/home.
@@ -85,4 +87,34 @@ type DonationCategorySlice struct {
 type DonationByCategoryResponse struct {
 	TotalAmount float64                 `json:"total_amount"`
 	Categories  []DonationCategorySlice `json:"categories"`
+}
+
+// --- GET /dashboard/volunteer (personal volunteer dashboard) ---
+
+// VolunteerMonthlyStat is one month of the 6-month chart for the logged-in
+// volunteer. Hours come from event_attendances.total_hours; donations are money
+// donations (type = 0).
+type VolunteerMonthlyStat struct {
+	Month             string  `json:"month"` // short month label, e.g. "Jan"
+	ActivityHours     float64 `json:"activity_hours"`
+	PhilosophyHours   float64 `json:"philosophy_hours"`
+	MissionHours      float64 `json:"mission_hours"`
+	MyDonation        float64 `json:"my_donation"`
+	CollectedDonation float64 `json:"collected_donation"`
+	DonorCount        int64   `json:"donor_count"` // donors acquired that month under the volunteer's groups
+	ExpenseAmount     float64 `json:"expense_amount"`
+}
+
+// VolunteerDashboardResponse is the payload for GET /dashboard/volunteer. The
+// scalar cards are the CURRENT month; MonthlyChart covers the last 6 months
+// (including the current month), oldest first.
+type VolunteerDashboardResponse struct {
+	TotalActivityHours     float64                `json:"total_activity_hours"`     // card 1
+	PhilosophyHours        float64                `json:"philosophy_hours"`         // card 2 (category_activity_id = 4)
+	MissionHours           float64                `json:"mission_hours"`            // card 3 (category_activity_id = 2)
+	TotalDonors            int64                  `json:"total_donors"`             // card 4 (all-time)
+	TotalMyDonation        float64                `json:"total_my_donation"`        // card 5
+	TotalCollectedDonation float64                `json:"total_collected_donation"` // card 6
+	TotalMyExpense         float64                `json:"total_my_expense"`         // current-month expenses
+	MonthlyChart           []VolunteerMonthlyStat `json:"monthly_chart"`
 }

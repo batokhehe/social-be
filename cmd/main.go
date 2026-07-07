@@ -20,6 +20,7 @@ import (
 	"social-be/internal/domain/donation"
 	"social-be/internal/domain/email"
 	"social-be/internal/domain/event"
+	"social-be/internal/domain/expense"
 	"social-be/internal/domain/levelarea"
 	"social-be/internal/domain/levelvolunteer"
 	"social-be/internal/domain/masteractivity"
@@ -109,6 +110,16 @@ func main() {
 	dashboardRepo := dashboard.NewGormRepository(db)
 	dashboardService := dashboard.NewService(dashboardRepo)
 	dashboardHandler := dashboard.NewHandler(dashboardService)
+
+	dashboardAreaRepo := dashboard.NewAreaGormRepository(db)
+	dashboardScopeResolver := dashboard.NewScopeResolver(dashboardAreaRepo)
+	dashboardHuAiService := dashboard.NewHuAiService(dashboardScopeResolver, dashboardAreaRepo)
+	dashboardXieLiService := dashboard.NewXieLiService(dashboardScopeResolver, dashboardAreaRepo)
+	dashboardAreaHandler := dashboard.NewAreaHandler(dashboardHuAiService, dashboardXieLiService)
+
+	expenseRepo := expense.NewGormRepository(db, logger.Log)
+	expenseService := expense.NewService(expenseRepo)
+	expenseHandler := expense.NewHandler(expenseService)
 
 	emailService := email.NewService()
 	userService := &user.Service{Repo: userRepo}
@@ -374,6 +385,16 @@ func main() {
 	dashboardGroup.GET("/summary", dashboardHandler.GetSummary)
 	dashboardGroup.GET("/home", dashboardHandler.GetHome)
 	dashboardGroup.GET("/donations-by-category", dashboardHandler.GetDonationsByCategory)
+	dashboardGroup.GET("/volunteer", dashboardHandler.GetVolunteerDashboard)
+	dashboardGroup.GET("/hu-ai", dashboardAreaHandler.GetHuAi)
+	dashboardGroup.GET("/xie-li", dashboardAreaHandler.GetXieLi)
+
+	expenses := protected.Group("/expenses")
+	expenses.GET("", expenseHandler.GetAll)
+	expenses.GET(":id", expenseHandler.GetByID)
+	expenses.POST("", expenseHandler.Create)
+	expenses.PUT(":id", expenseHandler.Update)
+	expenses.DELETE(":id", expenseHandler.Delete)
 
 	speaks := protected.Group("/speaks")
 	speaks.GET("", speakHandler.GetAll)

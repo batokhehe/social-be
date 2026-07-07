@@ -39,6 +39,7 @@ type EventAttendance struct {
 	CheckoutAt    *string           `json:"checkout_at,omitempty"`
 	CheckinPhoto  *string           `json:"checkin_photo,omitempty"`
 	CheckoutPhoto *string           `json:"checkout_photo,omitempty"`
+	TotalHours    *float64          `json:"total_hours,omitempty"`
 	CreatedBy     *int              `json:"created_by,omitempty"`
 	UpdatedBy     *int              `json:"updated_by,omitempty"`
 	DeletedBy     *int              `json:"deleted_by,omitempty"`

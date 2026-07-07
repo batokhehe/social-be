@@ -36,6 +36,10 @@ type Volunteer struct {
 	Languages             string     `json:"languages"`
 	PrivateVehicle        bool       `json:"private_vehicle"`
 	RegularDonor          bool       `json:"regular_donor"`
+	IsHuAiLeader          *bool      `json:"is_hu_ai_leader"`
+	IsHuAiDeputy          *bool      `json:"is_hu_ai_deputy"`
+	IsXieLiLeader         *bool      `json:"is_xie_li_leader"`
+	IsXieLiDeputy         *bool      `json:"is_xie_li_deputy"`
 	InterestedActivityIDs []int      `json:"interested_activity_ids,omitempty"`
 	FreeTimes             []FreeTime `json:"free_times,omitempty"`
 	Status                string     `json:"status"`

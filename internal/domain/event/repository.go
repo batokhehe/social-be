@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"social-be/internal/pkg/helper"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository interface {
@@ -136,6 +138,7 @@ type eventAttendanceModel struct {
 	CheckoutAt    *time.Time      `gorm:"column:checkout_at"`
 	CheckinPhoto  *string         `gorm:"column:checkin_photo"`
 	CheckoutPhoto *string         `gorm:"column:checkout_photo"`
+	TotalHours    *float64        `gorm:"column:total_hours"`
 	CreatedBy     *int            `gorm:"column:created_by"`
 	UpdatedBy     *int            `gorm:"column:updated_by"`
 	DeletedBy     *int            `gorm:"column:deleted_by"`
@@ -214,6 +217,7 @@ func toAttendanceEntity(item eventAttendanceModel) EventAttendance {
 	}
 	attendance.CheckinPhoto = item.CheckinPhoto
 	attendance.CheckoutPhoto = item.CheckoutPhoto
+	attendance.TotalHours = item.TotalHours
 
 	if item.Volunteer != nil {
 		attendance.Volunteer = &VolunteerSummary{
@@ -654,33 +658,69 @@ func (r *GormRepository) CheckIn(ctx context.Context, eventID int, volunteerID i
 	return &out, nil
 }
 
+// CheckOut records the checkout time, computes total_hours and persists the
+// attendance -- all in one transaction. The attendance row is locked FOR UPDATE
+// so two concurrent checkouts cannot both pass the duplicate guard.
 func (r *GormRepository) CheckOut(ctx context.Context, eventID int, volunteerID int, photoPath *string, actorID int) (*EventAttendance, error) {
-	var event eventModel
-	if err := r.DB.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", eventID).Take(&event).Error; err != nil {
-		return nil, err
-	}
-	if event.Status != "active" || event.EndAt.Before(time.Now()) {
-		return nil, fmt.Errorf("event is not open for checkout")
-	}
 	var attendance eventAttendanceModel
-	if err := r.DB.WithContext(ctx).
-		Where("event_id = ? AND volunteer_id = ? AND deleted_at IS NULL", eventID, volunteerID).
-		Take(&attendance).Error; err != nil {
+
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var event eventModel
+		if err := tx.Where("id = ? AND deleted_at IS NULL", eventID).Take(&event).Error; err != nil {
+			return err
+		}
+		if event.Status != "active" || event.EndAt.Before(time.Now()) {
+			return fmt.Errorf("event is not open for checkout")
+		}
+
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("event_id = ? AND volunteer_id = ? AND deleted_at IS NULL", eventID, volunteerID).
+			Take(&attendance).Error; err != nil {
+			return err
+		}
+
+		// Rules: no duplicate checkout, must have checked in first.
+		if attendance.CheckoutAt != nil {
+			return fmt.Errorf("attendance already checked out")
+		}
+		if attendance.CheckinAt == nil || attendance.Status != "checked_in" {
+			return fmt.Errorf("must check in before checkout")
+		}
+
+		checkoutAt := time.Now()
+		totalHours, err := calcTotalHours(*attendance.CheckinAt, checkoutAt)
+		if err != nil {
+			return err
+		}
+
+		attendance.CheckoutAt = &checkoutAt
+		attendance.CheckoutPhoto = photoPath
+		attendance.TotalHours = &totalHours
+		attendance.Status = "checked_out"
+		attendance.UpdatedBy = &actorID
+		attendance.UpdatedAt = checkoutAt
+
+		if err := tx.Save(&attendance).Error; err != nil {
+			return fmt.Errorf("failed check out: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	if attendance.Status != "checked_in" {
-		return nil, fmt.Errorf("must check in before checkout")
-	}
-	attendance.CheckoutAt = ptrTime(time.Now())
-	attendance.CheckoutPhoto = photoPath
-	attendance.Status = "checked_out"
-	attendance.UpdatedBy = &actorID
-	attendance.UpdatedAt = time.Now()
-	if err := r.DB.WithContext(ctx).Save(&attendance).Error; err != nil {
-		return nil, fmt.Errorf("failed check out: %w", err)
-	}
+
 	out := toAttendanceEntity(attendance)
 	return &out, nil
+}
+
+// calcTotalHours returns the activity duration in hours, rounded to 2 decimals.
+// It rejects a checkout that is earlier than the check-in.
+func calcTotalHours(checkinAt, checkoutAt time.Time) (float64, error) {
+	if checkoutAt.Before(checkinAt) {
+		return 0, fmt.Errorf("checkout time is before check-in time")
+	}
+	hours := checkoutAt.Sub(checkinAt).Hours()
+	return math.Round(hours*100) / 100, nil
 }
 
 func (r *GormRepository) loadAttachments(ctx context.Context, event *Event) error {

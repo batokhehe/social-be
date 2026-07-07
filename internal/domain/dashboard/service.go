@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"social-be/internal/pkg/helper"
@@ -30,6 +31,11 @@ func (s *Service) GetSummary(ctx context.Context) (*SummaryResponse, error) {
 		return nil, err
 	}
 
+	expense, err := s.Repo.ExpenseTotals(ctx, prevStart, currStart, nextStart)
+	if err != nil {
+		return nil, err
+	}
+
 	donors, err := s.Repo.ActiveDonorCounts(ctx, prevStart, currStart, nextStart)
 	if err != nil {
 		return nil, err
@@ -47,6 +53,7 @@ func (s *Service) GetSummary(ctx context.Context) (*SummaryResponse, error) {
 
 	return &SummaryResponse{
 		TotalDonation:    newMetricCard(donation.Current, donation.Previous),
+		TotalExpense:     newMetricCard(expense.Current, expense.Previous),
 		ActiveDonors:     newMetricCard(float64(donors.Current), float64(donors.Previous)),
 		ActiveVolunteers: newMetricCard(float64(volunteers.Current), float64(volunteers.Previous)),
 		UpcomingEvents:   UpcomingEventsCard{Count: upcoming},
@@ -72,7 +79,10 @@ func (s *Service) GetHome(ctx context.Context) (*HomeResponse, error) {
 		return nil, err
 	}
 
-	impact, err := s.Repo.ImpactSummary(ctx, s.now())
+	now := s.now()
+	currStart := firstOfMonth(now)
+	nextStart := currStart.AddDate(0, 1, 0)
+	impact, err := s.Repo.ImpactSummary(ctx, now, currStart, nextStart)
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +116,99 @@ func (s *Service) GetDonationsByCategory(ctx context.Context) (*DonationByCatego
 	return &DonationByCategoryResponse{
 		TotalAmount: total,
 		Categories:  orEmpty(slices),
+	}, nil
+}
+
+// GetVolunteerDashboard builds the personal dashboard for the authenticated
+// user. The scalar cards are the current month; the chart is the last 6 months
+// (oldest first). Total queries: resolve(1) + activity(1) + donation(1) +
+// donors(1) = 4 aggregate round trips, all server-timezone month-bounded.
+func (s *Service) GetVolunteerDashboard(ctx context.Context, userID int) (*VolunteerDashboardResponse, error) {
+	volunteerID, err := s.Repo.ResolveVolunteerID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	// Donor/group tables store the volunteer link as volunteers.id in text form.
+	volunteerKey := strconv.Itoa(volunteerID)
+
+	now := s.now()
+	currStart := firstOfMonth(now)
+	nextStart := currStart.AddDate(0, 1, 0)
+	sixStart := currStart.AddDate(0, -5, 0) // 6 months including the current one
+
+	activity, err := s.Repo.MonthlyActivityStats(ctx, volunteerID, sixStart, nextStart)
+	if err != nil {
+		return nil, err
+	}
+	donation, err := s.Repo.MonthlyDonationStats(ctx, volunteerKey, sixStart, nextStart)
+	if err != nil {
+		return nil, err
+	}
+	donors, err := s.Repo.CountMyDonors(ctx, volunteerKey)
+	if err != nil {
+		return nil, err
+	}
+
+	donorByMonthRows, err := s.Repo.MonthlyDonorCounts(ctx, volunteerKey, sixStart, nextStart)
+	if err != nil {
+		return nil, err
+	}
+
+	expenseRows, err := s.Repo.MonthlyExpenseStats(ctx, volunteerID, sixStart, nextStart)
+	if err != nil {
+		return nil, err
+	}
+
+	actByMonth := make(map[string]monthlyActivityRow, len(activity))
+	for _, row := range activity {
+		actByMonth[row.YM] = row
+	}
+	donByMonth := make(map[string]monthlyDonationRow, len(donation))
+	for _, row := range donation {
+		donByMonth[row.YM] = row
+	}
+	donorByMonth := make(map[string]monthlyDonorRow, len(donorByMonthRows))
+	for _, row := range donorByMonthRows {
+		donorByMonth[row.YM] = row
+	}
+	expenseByMonth := make(map[string]monthlyExpenseRow, len(expenseRows))
+	for _, row := range expenseRows {
+		expenseByMonth[row.YM] = row
+	}
+
+	currentKey := currStart.Format("2006-01")
+	chart := make([]VolunteerMonthlyStat, 0, 6)
+	var current VolunteerMonthlyStat
+	for i := 0; i < 6; i++ {
+		monthStart := sixStart.AddDate(0, i, 0)
+		key := monthStart.Format("2006-01")
+		act := actByMonth[key] // zero value when the month has no rows
+		don := donByMonth[key]
+		stat := VolunteerMonthlyStat{
+			Month:             monthStart.Format("Jan"),
+			ActivityHours:     act.ActivityHours,
+			PhilosophyHours:   act.PhilosophyHours,
+			MissionHours:      act.MissionHours,
+			MyDonation:        don.MyDonation,
+			CollectedDonation: don.CollectedDonation,
+			DonorCount:        donorByMonth[key].DonorCount,
+			ExpenseAmount:     expenseByMonth[key].ExpenseAmount,
+		}
+		chart = append(chart, stat)
+		if key == currentKey {
+			current = stat
+		}
+	}
+
+	return &VolunteerDashboardResponse{
+		TotalActivityHours:     current.ActivityHours,
+		PhilosophyHours:        current.PhilosophyHours,
+		MissionHours:           current.MissionHours,
+		TotalDonors:            donors,
+		TotalMyDonation:        current.MyDonation,
+		TotalCollectedDonation: current.CollectedDonation,
+		TotalMyExpense:         current.ExpenseAmount,
+		MonthlyChart:           chart,
 	}, nil
 }
 

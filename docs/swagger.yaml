@@ -228,6 +228,60 @@ definitions:
     - pic_user_id
     - start_at
     type: object
+  expense.CreateRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 2000
+        type: string
+      expense_date:
+        type: string
+      status:
+        enum:
+        - draft
+        - paid
+        - cancelled
+        type: string
+      volunteer_id:
+        minimum: 1
+        type: integer
+    required:
+    - category_id
+    - expense_date
+    - status
+    - volunteer_id
+    type: object
+  expense.UpdateRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 2000
+        type: string
+      expense_date:
+        type: string
+      status:
+        enum:
+        - draft
+        - paid
+        - cancelled
+        type: string
+      volunteer_id:
+        minimum: 1
+        type: integer
+    required:
+    - category_id
+    - expense_date
+    - status
+    - volunteer_id
+    type: object
   levelarea.CreateRequest:
     properties:
       below_level_area_id:
@@ -996,6 +1050,28 @@ paths:
       summary: Dashboard homepage widgets
       tags:
       - dashboard
+  /dashboard/hu-ai:
+    get:
+      description: KPI summary + 6-month chart for the authenticated Hu Ai leader/deputy's
+        area. Requires is_hu_ai_leader or is_hu_ai_deputy; otherwise 403.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hu Ai area dashboard
+      tags:
+      - dashboard
   /dashboard/summary:
     get:
       description: 'Returns dashboard KPI cards: total money donation, active donors
@@ -1012,6 +1088,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Dashboard summary KPIs
+      tags:
+      - dashboard
+  /dashboard/volunteer:
+    get:
+      description: 'Statistics for the authenticated volunteer: current-month KPI
+        cards (activity/philosophy/mission hours, my donors, my donations, collected
+        donations) plus a 6-month chart. Volunteer identity is taken from the JWT,
+        never from query params.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Personal volunteer dashboard
+      tags:
+      - dashboard
+  /dashboard/xie-li:
+    get:
+      description: KPI summary + 6-month chart for the authenticated Xie Li leader/deputy's
+        area. Requires is_xie_li_leader or is_xie_li_deputy; otherwise 403.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Xie Li area dashboard
       tags:
       - dashboard
   /donations:
@@ -1589,6 +1706,137 @@ paths:
       summary: Get events the current user is involved in
       tags:
       - event
+  /expenses:
+    get:
+      description: Paginated list of expenses. Supports filter (status, category_id,
+        volunteer_id, expense_date_from/to), search (expense_no, description) and
+        sort (sort=expense_date|amount|created_at|expense_no|status, order=asc|desc).
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: Sort column
+        in: query
+        name: sort
+        type: string
+      - description: asc or desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all expenses
+      tags:
+      - expense
+    post:
+      consumes:
+      - application/json
+      description: 'Create a new expense (expense_no is auto-generated: EXP-YYYYMM-00001)'
+      parameters:
+      - description: Create expense
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/expense.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create expense
+      tags:
+      - expense
+  /expenses/{id}:
+    delete:
+      description: Soft delete an expense (sets deleted_by)
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete expense
+      tags:
+      - expense
+    get:
+      description: Get expense detail with category, volunteer and audit actors
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get expense by ID
+      tags:
+      - expense
+    put:
+      consumes:
+      - application/json
+      description: Update an existing expense (expense_no stays immutable)
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update expense
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/expense.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update expense
+      tags:
+      - expense
   /login:
     post:
       consumes:
