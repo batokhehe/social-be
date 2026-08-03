@@ -5,6 +5,7 @@ import (
 
 	"social-be/internal/domain/user"
 	"social-be/internal/domain/volunteer"
+	"social-be/internal/pkg/logger"
 	"social-be/internal/pkg/security"
 )
 
@@ -29,10 +30,17 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) error {
 	})
 }
 
-func (s *Service) Login(ctx context.Context, req LoginRequest) (*TokenResponse, error) {
+func (s *Service) Login(ctx context.Context, req LoginRequest, meta LoginMeta) (*TokenResponse, error) {
 	accessToken, refreshToken, userID, role, err := s.UserService.LoginEx(ctx, req.Email, req.Password)
 	if err != nil {
 		return nil, err
+	}
+
+	// Record the latest successful login. Best-effort: a metadata write must
+	// never turn a valid login into a failure. (Failed logins never reach here,
+	// so failed attempts never update these fields.)
+	if err := s.UserService.UpdateLastLogin(ctx, userID, meta.IP, meta.UserAgent); err != nil {
+		logger.FromContext(ctx).WithError(err).WithField("user_id", userID).Warn("failed to record last login")
 	}
 
 	response := &TokenResponse{

@@ -12,6 +12,13 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+// LoginMeta is transport metadata captured at the HTTP layer for last-login
+// tracking. It is NOT part of the login request/response contract.
+type LoginMeta struct {
+	IP        string
+	UserAgent string
+}
+
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }

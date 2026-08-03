@@ -152,3 +152,16 @@ func (s *Service) UpdateProfilePhoto(
 
 	return nil
 }
+
+// UpdateLastLogin records the latest successful login and invalidates the user
+// caches so GET user detail/list reflect it immediately.
+func (s *Service) UpdateLastLogin(ctx context.Context, userID int, ip, userAgent string) error {
+	if err := s.Repo.UpdateLastLogin(ctx, userID, ip, userAgent); err != nil {
+		return err
+	}
+
+	cache.RDB.Del(ctx, fmt.Sprintf(userByIDCacheKeyFormat, userID))
+	cache.RDB.Del(ctx, userListCacheKey)
+
+	return nil
+}

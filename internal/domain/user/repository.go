@@ -19,6 +19,7 @@ type Repository interface {
 	GetByEmailOrVIS(ctx context.Context, identifier string) (*User, string, int, error)
 	GetByID(ctx context.Context, id int) (*User, error)
 	UpdateProfilePhoto(ctx context.Context, userID int, profilePhoto string) error
+	UpdateLastLogin(ctx context.Context, userID int, ip, userAgent string) error
 }
 
 type GormRepository struct {
@@ -34,19 +35,22 @@ func NewGormRepository(db *gorm.DB, logger *logrus.Logger) Repository {
 }
 
 type userModel struct {
-	ID           int        `gorm:"column:id"`
-	Name         string     `gorm:"column:name"`
-	Email        string     `gorm:"column:email"`
-	PasswordHash string     `gorm:"column:password_hash"`
-	Role         int        `gorm:"column:role"`
-	Status       int        `gorm:"column:status"`
-	ProfilePhoto string     `gorm:"column:profile_photo"`
-	CreatedAt    *time.Time `gorm:"column:created_at"`
-	CreatedBy    *int       `gorm:"column:created_by"`
-	UpdatedAt    *time.Time `gorm:"column:updated_at"`
-	UpdatedBy    *int       `gorm:"column:updated_by"`
-	DeletedAt    *time.Time `gorm:"column:deleted_at"`
-	DeletedBy    *int       `gorm:"column:deleted_by"`
+	ID                 int        `gorm:"column:id"`
+	Name               string     `gorm:"column:name"`
+	Email              string     `gorm:"column:email"`
+	PasswordHash       string     `gorm:"column:password_hash"`
+	Role               int        `gorm:"column:role"`
+	Status             int        `gorm:"column:status"`
+	ProfilePhoto       string     `gorm:"column:profile_photo"`
+	LastLoginAt        *time.Time `gorm:"column:last_login_at"`
+	LastLoginIP        *string    `gorm:"column:last_login_ip"`
+	LastLoginUserAgent *string    `gorm:"column:last_login_user_agent"`
+	CreatedAt          *time.Time `gorm:"column:created_at"`
+	CreatedBy          *int       `gorm:"column:created_by"`
+	UpdatedAt          *time.Time `gorm:"column:updated_at"`
+	UpdatedBy          *int       `gorm:"column:updated_by"`
+	DeletedAt          *time.Time `gorm:"column:deleted_at"`
+	DeletedBy          *int       `gorm:"column:deleted_by"`
 }
 
 func (userModel) TableName() string {
@@ -55,12 +59,15 @@ func (userModel) TableName() string {
 
 func toEntity(row userModel) User {
 	return User{
-		ID:           row.ID,
-		Name:         row.Name,
-		Email:        row.Email,
-		Role:         row.Role,
-		Status:       row.Status,
-		ProfilePhoto: row.ProfilePhoto,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Email:              row.Email,
+		Role:               row.Role,
+		Status:             row.Status,
+		ProfilePhoto:       row.ProfilePhoto,
+		LastLoginAt:        row.LastLoginAt,
+		LastLoginIP:        row.LastLoginIP,
+		LastLoginUserAgent: row.LastLoginUserAgent,
 	}
 }
 
@@ -80,7 +87,7 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, password
 
 func (r *GormRepository) GetAll(ctx context.Context) ([]User, error) {
 	var rows []userModel
-	if err := r.DB.WithContext(ctx).Select("id", "name", "email", "role", "status", "profile_photo").
+	if err := r.DB.WithContext(ctx).Select("id", "name", "email", "role", "status", "profile_photo", "last_login_at", "last_login_ip", "last_login_user_agent").
 		Where("deleted_at IS NULL").
 		Order("id ASC").
 		Find(&rows).Error; err != nil {
@@ -107,7 +114,7 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 
 	var rows []userModel
 	if err := baseQuery.
-		Select("id", "name", "email", "role", "status", "profile_photo").
+		Select("id", "name", "email", "role", "status", "profile_photo", "last_login_at", "last_login_ip", "last_login_user_agent").
 		Order("id ASC").
 		Limit(page.Limit).
 		Offset(page.Offset).
@@ -155,7 +162,7 @@ func (r *GormRepository) GetByEmailOrVIS(ctx context.Context, identifier string)
 
 func (r *GormRepository) GetByID(ctx context.Context, id int) (*User, error) {
 	var row userModel
-	err := r.DB.WithContext(ctx).Select("id", "name", "email", "role", "status", "profile_photo").
+	err := r.DB.WithContext(ctx).Select("id", "name", "email", "role", "status", "profile_photo", "last_login_at", "last_login_ip", "last_login_user_agent").
 		Where("id = ? AND deleted_at IS NULL", id).
 		Take(&row).Error
 	if err != nil {
@@ -186,6 +193,28 @@ func (r *GormRepository) UpdateProfilePhoto(
 
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// UpdateLastLogin records the latest successful login in a single UPDATE. NOW()
+// is evaluated in the database (atomic, no clock skew); the statement is
+// idempotent-safe and last-writer-wins, so concurrent logins cannot race into an
+// inconsistent state. Only the three metadata columns are written.
+func (r *GormRepository) UpdateLastLogin(ctx context.Context, userID int, ip, userAgent string) error {
+	result := r.DB.WithContext(ctx).
+		Model(&userModel{}).
+		Where("id = ? AND deleted_at IS NULL", userID).
+		Updates(map[string]interface{}{
+			"last_login_at":         gorm.Expr("NOW()"),
+			"last_login_ip":         ip,
+			"last_login_user_agent": userAgent,
+		})
+
+	if result.Error != nil {
+		r.Logger.WithError(result.Error).Error("UpdateLastLogin failed")
+		return fmt.Errorf("failed update last login: %w", result.Error)
 	}
 
 	return nil

@@ -73,7 +73,11 @@ func (h *Handler) Login(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	token, err := h.Service.Login(ctx, req)
+	// Transport metadata for last-login tracking. c.ClientIP() honours
+	// X-Forwarded-For (and other proxy headers) and falls back to RemoteAddr.
+	meta := LoginMeta{IP: c.ClientIP(), UserAgent: c.Request.UserAgent()}
+
+	token, err := h.Service.Login(ctx, req, meta)
 	if err != nil {
 		response.AbortError(c, apperror.Wrap(err, http.StatusUnauthorized, apperror.CodeUnauthorized, "invalid credentials"))
 		return
