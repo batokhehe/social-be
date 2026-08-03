@@ -98,6 +98,9 @@ type Repository interface {
 	// ImpactSummary returns active volunteers, completed activities, and the
 	// current-month [currStart, nextStart) expense total in one query.
 	ImpactSummary(ctx context.Context, now, currStart, nextStart time.Time) (ImpactSummary, error)
+	// HomeTrends returns the monthly volunteer/donor/donation trend buckets over
+	// [from, to) in a single query.
+	HomeTrends(ctx context.Context, from, to time.Time) ([]trendRow, error)
 
 	// DonationsByCategory returns, per donation category, the summed money-donation
 	// amount for the current month [currStart, nextStart) -- a single grouped
@@ -326,6 +329,59 @@ SELECT
 	return out, nil
 }
 
+// Trend sources returned by HomeTrends (discriminator of the UNION ALL).
+const (
+	trendSourceVolunteer = "volunteer"
+	trendSourceDonor     = "donor"
+	trendSourceDonation  = "donation"
+)
+
+// trendRow is one (source, month) bucket of the Home Dashboard trends.
+type trendRow struct {
+	Source string  `gorm:"column:source"`
+	YM     string  `gorm:"column:ym"`
+	Total  float64 `gorm:"column:total"`
+}
+
+// HomeTrends returns all three monthly trends over [from, to) in ONE round trip
+// via UNION ALL, each branch a plain grouped aggregate with no joins. Only
+// months that actually have rows are returned; the service zero-fills the fixed
+// 6-month window, which guarantees exactly 6 ascending points per trend.
+func (r *GormRepository) HomeTrends(ctx context.Context, from, to time.Time) ([]trendRow, error) {
+	const q = `
+SELECT 'volunteer' AS source,
+       to_char(date_trunc('month', created_at), 'YYYY-MM') AS ym,
+       COUNT(*)::numeric AS total
+FROM volunteers
+WHERE status = 'active' AND deleted_at IS NULL
+    AND created_at >= @from AND created_at < @to
+GROUP BY 1, 2
+UNION ALL
+SELECT 'donor',
+       to_char(date_trunc('month', created_at), 'YYYY-MM'),
+       COUNT(*)::numeric
+FROM master_donaturs
+WHERE status = 'active' AND deleted_at IS NULL
+    AND created_at >= @from AND created_at < @to
+GROUP BY 1, 2
+UNION ALL
+SELECT 'donation',
+       to_char(date_trunc('month', created_at), 'YYYY-MM'),
+       COALESCE(SUM(amount), 0)
+FROM donations
+WHERE deleted_at IS NULL AND type = @money
+    AND created_at >= @from AND created_at < @to
+GROUP BY 1, 2`
+
+	var rows []trendRow
+	err := r.DB.WithContext(ctx).Raw(q,
+		sql.Named("from", from),
+		sql.Named("to", to),
+		sql.Named("money", donationTypeMoney),
+	).Scan(&rows).Error
+	return rows, err
+}
+
 // DonationsByCategory aggregates current-month money donations (type = 0, not
 // soft-deleted, created_at in [currStart, nextStart)) by category, summing the
 // amount per category in one grouped query. Categories with no donations this
@@ -394,8 +450,10 @@ GROUP BY 1`
 	return rows, err
 }
 
-// MonthlyExpenseStats: one grouped query of the volunteer's own expenses by
-// expense_date month (cancelled excluded).
+// MonthlyExpenseStats: one grouped query of the expenses of the volunteer's
+// master area by expense_date month (cancelled excluded). Expenses belong to an
+// area (volunteer_id is only an optional PIC), so "my expenses" means the
+// expenses of the area the volunteer belongs to.
 func (r *GormRepository) MonthlyExpenseStats(ctx context.Context, volunteerID int, from, to time.Time) ([]monthlyExpenseRow, error) {
 	const q = `
 SELECT
@@ -404,7 +462,7 @@ SELECT
 FROM expenses
 WHERE deleted_at IS NULL
     AND status <> 'cancelled'
-    AND volunteer_id = ?
+    AND master_area_id = (SELECT master_area_id FROM volunteers WHERE id = ? AND deleted_at IS NULL)
     AND expense_date >= ? AND expense_date < ?
 GROUP BY 1`
 

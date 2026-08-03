@@ -62,12 +62,27 @@ type ImpactSummary struct {
 	CurrentMonthExpense float64 `json:"current_month_expense"`
 }
 
+// TrendPoint is one month of a Home Dashboard trend chart. Month is "YYYY-MM";
+// Total is a count for the registration trends and a summed amount for the
+// donation trend.
+type TrendPoint struct {
+	Month string  `json:"month"`
+	Total float64 `json:"total"`
+}
+
 // HomeResponse is the payload for GET /dashboard/home.
 type HomeResponse struct {
 	OngoingActivities []OngoingActivity `json:"ongoing_activities"`
 	LatestDonations   []LatestDonation  `json:"latest_donations"`
 	TopVolunteers     []TopVolunteer    `json:"top_volunteers"`
 	ImpactSummary     ImpactSummary     `json:"impact_summary"`
+
+	// Monthly trends for the last 6 months (current month included), oldest
+	// first, always exactly 6 points with zero-filled gaps. Global: not filtered
+	// by master area or by the logged-in user.
+	VolunteerTrend []TrendPoint `json:"volunteer_trend"`
+	DonorTrend     []TrendPoint `json:"donor_trend"`
+	DonationTrend  []TrendPoint `json:"donation_trend"`
 }
 
 // --- GET /dashboard/donations-by-category (pie chart) ---

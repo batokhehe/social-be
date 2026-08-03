@@ -240,6 +240,9 @@ definitions:
         type: string
       expense_date:
         type: string
+      master_area_id:
+        minimum: 1
+        type: integer
       status:
         enum:
         - draft
@@ -247,13 +250,16 @@ definitions:
         - cancelled
         type: string
       volunteer_id:
+        description: |-
+          VolunteerID is the optional PIC. Validated for existence only -- its own
+          master area is irrelevant and is never matched against MasterAreaID.
         minimum: 1
         type: integer
     required:
     - category_id
     - expense_date
+    - master_area_id
     - status
-    - volunteer_id
     type: object
   expense.UpdateRequest:
     properties:
@@ -267,6 +273,9 @@ definitions:
         type: string
       expense_date:
         type: string
+      master_area_id:
+        minimum: 1
+        type: integer
       status:
         enum:
         - draft
@@ -274,13 +283,16 @@ definitions:
         - cancelled
         type: string
       volunteer_id:
+        description: |-
+          VolunteerID is the optional PIC. Validated for existence only -- its own
+          master area is irrelevant and is never matched against MasterAreaID.
         minimum: 1
         type: integer
     required:
     - category_id
     - expense_date
+    - master_area_id
     - status
-    - volunteer_id
     type: object
   levelarea.CreateRequest:
     properties:
@@ -1738,9 +1750,11 @@ paths:
       - event
   /expenses:
     get:
-      description: Paginated list of expenses. Supports filter (status, category_id,
-        volunteer_id, expense_date_from/to), search (expense_no, description) and
-        sort (sort=expense_date|amount|created_at|expense_no|status, order=asc|desc).
+      description: 'Paginated list of expenses. Supports filter (status, master_area_id,
+        category_id, expense_date_from/to), search (expense_no, description) and sort
+        (sort=expense_date|amount|created_at|expense_no|status, order=asc|desc). Note:
+        volunteer_id (optional PIC) is not a supported filter -- the shared filter
+        helper maps scalar columns only.'
       parameters:
       - description: Page number
         in: query
@@ -1818,7 +1832,8 @@ paths:
       tags:
       - expense
     get:
-      description: Get expense detail with category, volunteer and audit actors
+      description: Get expense detail with master area (owner), category, optional
+        PIC volunteer and audit actors
       parameters:
       - description: Expense ID
         in: path

@@ -9,10 +9,24 @@ import (
 // for the requested area dashboard.
 var ErrForbidden = errors.New("forbidden")
 
+// Scope is the resolved reach of an area leader.
+//
+// VolunteerIDs spans the leader's area subtree (root + descendants) and drives
+// the people-based aggregates: activities, hours, active volunteers, donors and
+// donations.
+//
+// MasterAreaID is the leader's OWN area only -- no descendants. Expense
+// aggregation is deliberately per-area (business rule): expense dashboards show
+// only expenses belonging to the logged-in user's master area.
+type Scope struct {
+	VolunteerIDs []int
+	MasterAreaID int
+}
+
 // ScopeResolver is the single reusable scope-resolution component. It resolves
-// the logged-in volunteer, enforces the leadership permission, and returns ALL
-// volunteer ids under the leader's area. Dashboard services receive only the
-// []int and never learn how the scope was determined.
+// the logged-in volunteer, enforces the leadership permission, and returns the
+// leader's area subtree. Dashboard services receive only the Scope and never
+// learn how it was determined.
 type ScopeResolver struct {
 	Repo AreaRepository
 }
@@ -21,28 +35,38 @@ func NewScopeResolver(repo AreaRepository) *ScopeResolver {
 	return &ScopeResolver{Repo: repo}
 }
 
-// ResolveHuAiVolunteerIDs authorizes the Hu Ai dashboard (leader or deputy) and
-// returns the volunteer ids in the leader's area subtree.
-func (s *ScopeResolver) ResolveHuAiVolunteerIDs(ctx context.Context, userID int) ([]int, error) {
+// ResolveHuAiScope authorizes the Hu Ai dashboard (leader or deputy) and returns
+// the leader's area subtree scope.
+func (s *ScopeResolver) ResolveHuAiScope(ctx context.Context, userID int) (Scope, error) {
 	v, err := s.Repo.GetScopeVolunteer(ctx, userID)
 	if err != nil {
-		return nil, err
+		return Scope{}, err
 	}
 	if !v.IsHuAiLeader && !v.IsHuAiDeputy {
-		return nil, ErrForbidden
+		return Scope{}, ErrForbidden
 	}
-	return s.Repo.AreaVolunteerIDs(ctx, v.MasterAreaID)
+	return s.scopeFor(ctx, v.MasterAreaID)
 }
 
-// ResolveXieLiVolunteerIDs authorizes the Xie Li dashboard (leader or deputy)
-// and returns the volunteer ids in the leader's area subtree.
-func (s *ScopeResolver) ResolveXieLiVolunteerIDs(ctx context.Context, userID int) ([]int, error) {
+// ResolveXieLiScope authorizes the Xie Li dashboard (leader or deputy) and
+// returns the leader's area subtree scope.
+func (s *ScopeResolver) ResolveXieLiScope(ctx context.Context, userID int) (Scope, error) {
 	v, err := s.Repo.GetScopeVolunteer(ctx, userID)
 	if err != nil {
-		return nil, err
+		return Scope{}, err
 	}
 	if !v.IsXieLiLeader && !v.IsXieLiDeputy {
-		return nil, ErrForbidden
+		return Scope{}, ErrForbidden
 	}
-	return s.Repo.AreaVolunteerIDs(ctx, v.MasterAreaID)
+	return s.scopeFor(ctx, v.MasterAreaID)
+}
+
+func (s *ScopeResolver) scopeFor(ctx context.Context, masterAreaID int) (Scope, error) {
+	// People-based aggregates keep spanning the area subtree.
+	volunteerIDs, err := s.Repo.AreaVolunteerIDs(ctx, masterAreaID)
+	if err != nil {
+		return Scope{}, err
+	}
+	// Expenses are scoped to the leader's own area only (no subtree).
+	return Scope{VolunteerIDs: volunteerIDs, MasterAreaID: masterAreaID}, nil
 }

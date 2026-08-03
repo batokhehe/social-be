@@ -16,6 +16,9 @@ type mockAreaRepo struct {
 	areaIDs   []int
 	gotAreaID int
 
+	// captured expense scope: must be the leader's own area id, never a subtree
+	gotExpenseAreaID int
+
 	activitiesByMonth map[string]int64
 	hoursByMonth      map[string]float64
 	activeInRange     map[string]int64
@@ -54,7 +57,8 @@ func (m *mockAreaRepo) VolunteerStatusCounts(ctx context.Context, ids []int) (in
 func (m *mockAreaRepo) CountDonors(ctx context.Context, ids []int, from, to time.Time) (int64, error) {
 	return m.donorsByMonth[from.Format("2006-01")], nil
 }
-func (m *mockAreaRepo) SumExpenses(ctx context.Context, ids []int, from, to time.Time) (float64, error) {
+func (m *mockAreaRepo) SumExpenses(ctx context.Context, masterAreaID int, from, to time.Time) (float64, error) {
+	m.gotExpenseAreaID = masterAreaID
 	return m.expensesByMonth[from.Format("2006-01")], nil
 }
 func (m *mockAreaRepo) SumDonations(ctx context.Context, ids []int, from, to time.Time) (float64, error) {
@@ -67,7 +71,7 @@ func TestResolveHuAi_ForbiddenWithoutFlag(t *testing.T) {
 	repo := &mockAreaRepo{scope: &ScopeVolunteer{ID: 1, MasterAreaID: 10, IsXieLiLeader: true}} // xie li only
 	resolver := NewScopeResolver(repo)
 
-	_, err := resolver.ResolveHuAiVolunteerIDs(context.Background(), 99)
+	_, err := resolver.ResolveHuAiScope(context.Background(), 99)
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -80,12 +84,16 @@ func TestResolveHuAi_AllowedForDeputy(t *testing.T) {
 	}
 	resolver := NewScopeResolver(repo)
 
-	ids, err := resolver.ResolveHuAiVolunteerIDs(context.Background(), 99)
+	scope, err := resolver.ResolveHuAiScope(context.Background(), 99)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(ids) != 3 || repo.gotAreaID != 10 {
-		t.Fatalf("ids=%v areaID=%d, want 3 ids from area 10", ids, repo.gotAreaID)
+	if len(scope.VolunteerIDs) != 3 || repo.gotAreaID != 10 {
+		t.Fatalf("volunteerIDs=%v areaID=%d, want 3 ids from area 10", scope.VolunteerIDs, repo.gotAreaID)
+	}
+	// Expense scope is the leader's own area only -- never a subtree.
+	if scope.MasterAreaID != 10 {
+		t.Fatalf("scope.MasterAreaID = %d, want 10 (own area only)", scope.MasterAreaID)
 	}
 }
 
@@ -93,7 +101,7 @@ func TestResolveXieLi_ForbiddenWithHuAiFlagOnly(t *testing.T) {
 	repo := &mockAreaRepo{scope: &ScopeVolunteer{ID: 1, MasterAreaID: 10, IsHuAiLeader: true}}
 	resolver := NewScopeResolver(repo)
 
-	if _, err := resolver.ResolveXieLiVolunteerIDs(context.Background(), 99); !errors.Is(err, ErrForbidden) {
+	if _, err := resolver.ResolveXieLiScope(context.Background(), 99); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
 }
@@ -165,6 +173,10 @@ func TestHuAiService_GetDashboard(t *testing.T) {
 	// Scope reached the aggregates.
 	if len(repo.gotIDs) != 3 {
 		t.Fatalf("aggregates got ids=%v, want 3", repo.gotIDs)
+	}
+	// Expense aggregation must use the leader's own master area (10), not a subtree.
+	if repo.gotExpenseAreaID != 10 {
+		t.Fatalf("expense scope area = %d, want 10 (own area only)", repo.gotExpenseAreaID)
 	}
 }
 

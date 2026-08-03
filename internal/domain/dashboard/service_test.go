@@ -27,6 +27,8 @@ type mockRepo struct {
 	gotNow                    time.Time
 	gotOngoingNow             time.Time
 	gotImpactNow              time.Time
+	trendRows                 []trendRow
+	gotTrendFrom, gotTrendTo  time.Time
 	gotCatCurr, gotCatNext    time.Time
 
 	// volunteer dashboard
@@ -84,6 +86,11 @@ func (m *mockRepo) TopVolunteers(ctx context.Context) ([]TopVolunteer, error) {
 func (m *mockRepo) ImpactSummary(ctx context.Context, now, currStart, nextStart time.Time) (ImpactSummary, error) {
 	m.gotImpactNow = now
 	return m.impact, nil
+}
+
+func (m *mockRepo) HomeTrends(ctx context.Context, from, to time.Time) ([]trendRow, error) {
+	m.gotTrendFrom, m.gotTrendTo = from, to
+	return m.trendRows, nil
 }
 
 func (m *mockRepo) DonationsByCategory(ctx context.Context, currStart, nextStart time.Time) ([]DonationCategorySlice, error) {
@@ -202,6 +209,111 @@ func TestGetHome(t *testing.T) {
 	// must reach ImpactSummary.
 	if !repo.gotImpactNow.Equal(fixed) {
 		t.Fatalf("impact now = %v, want %v", repo.gotImpactNow, fixed)
+	}
+
+}
+
+// Trends must always return exactly 6 ascending months INCLUDING the current
+// month, zero-filling months with no rows. Today 2026-07-19 => 2026-02..2026-07.
+func TestGetHome_Trends_SixMonthsZeroFilledAscending(t *testing.T) {
+	repo := &mockRepo{trendRows: []trendRow{
+		{Source: trendSourceVolunteer, YM: "2026-02", Total: 12},
+		{Source: trendSourceVolunteer, YM: "2026-07", Total: 5}, // current month
+		{Source: trendSourceDonor, YM: "2026-04", Total: 7},
+		{Source: trendSourceDonation, YM: "2026-07", Total: 184250000},
+	}}
+	fixed := time.Date(2026, time.July, 19, 9, 0, 0, 0, time.UTC)
+	svc := &Service{Repo: repo, now: func() time.Time { return fixed }}
+
+	got, err := svc.GetHome(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	wantMonths := []string{"2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07"}
+	for name, trend := range map[string][]TrendPoint{
+		"volunteer_trend": got.VolunteerTrend,
+		"donor_trend":     got.DonorTrend,
+		"donation_trend":  got.DonationTrend,
+	} {
+		if len(trend) != 6 {
+			t.Fatalf("%s len = %d, want exactly 6", name, len(trend))
+		}
+		for i, m := range wantMonths {
+			if trend[i].Month != m {
+				t.Fatalf("%s[%d].month = %q, want %q (ascending)", name, i, trend[i].Month, m)
+			}
+		}
+	}
+
+	// Values land in the right buckets; everything else is zero-filled.
+	if got.VolunteerTrend[0].Total != 12 || got.VolunteerTrend[5].Total != 5 {
+		t.Fatalf("volunteer trend values: %+v", got.VolunteerTrend)
+	}
+	if got.VolunteerTrend[1].Total != 0 || got.VolunteerTrend[4].Total != 0 {
+		t.Fatalf("volunteer trend must zero-fill empty months: %+v", got.VolunteerTrend)
+	}
+	if got.DonorTrend[2].Total != 7 || got.DonorTrend[0].Total != 0 {
+		t.Fatalf("donor trend values: %+v", got.DonorTrend)
+	}
+	if got.DonationTrend[5].Total != 184250000 {
+		t.Fatalf("donation trend current month = %v, want 184250000", got.DonationTrend[5].Total)
+	}
+
+	// The repository is asked for exactly the 6-month window.
+	wantFrom := time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC)
+	wantTo := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
+	if !repo.gotTrendFrom.Equal(wantFrom) || !repo.gotTrendTo.Equal(wantTo) {
+		t.Fatalf("trend window = [%v, %v), want [%v, %v)", repo.gotTrendFrom, repo.gotTrendTo, wantFrom, wantTo)
+	}
+}
+
+// No data at all: still exactly 6 months, all zero, never nil.
+func TestGetHome_Trends_NoData(t *testing.T) {
+	repo := &mockRepo{}
+	fixed := time.Date(2026, time.July, 19, 0, 0, 0, 0, time.UTC)
+	svc := &Service{Repo: repo, now: func() time.Time { return fixed }}
+
+	got, err := svc.GetHome(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for name, trend := range map[string][]TrendPoint{
+		"volunteer_trend": got.VolunteerTrend,
+		"donor_trend":     got.DonorTrend,
+		"donation_trend":  got.DonationTrend,
+	} {
+		if trend == nil || len(trend) != 6 {
+			t.Fatalf("%s = %+v, want 6 zero points", name, trend)
+		}
+		for _, p := range trend {
+			if p.Total != 0 {
+				t.Fatalf("%s expected all zeroes, got %+v", name, trend)
+			}
+		}
+	}
+}
+
+// The window must roll correctly across a year boundary.
+func TestGetHome_Trends_CrossesYear(t *testing.T) {
+	repo := &mockRepo{trendRows: []trendRow{
+		{Source: trendSourceDonation, YM: "2025-08", Total: 1000},
+	}}
+	fixed := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
+	svc := &Service{Repo: repo, now: func() time.Time { return fixed }}
+
+	got, err := svc.GetHome(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []string{"2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01"}
+	for i, m := range want {
+		if got.DonationTrend[i].Month != m {
+			t.Fatalf("donation_trend[%d].month = %q, want %q", i, got.DonationTrend[i].Month, m)
+		}
+	}
+	if got.DonationTrend[0].Total != 1000 {
+		t.Fatalf("oldest bucket = %v, want 1000", got.DonationTrend[0].Total)
 	}
 }
 

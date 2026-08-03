@@ -157,6 +157,7 @@ type userModel struct {
 type VolunteerSummary struct {
 	ID             int    `json:"id"`
 	UserID         int    `json:"user_id"`
+	VIS            string `json:"vis"`
 	IndonesianName string `json:"indonesian_name"`
 	MandarinName   string `json:"mandarin_name"`
 	Phone          string `json:"phone"`
@@ -223,6 +224,7 @@ func toAttendanceEntity(item eventAttendanceModel) EventAttendance {
 		attendance.Volunteer = &VolunteerSummary{
 			ID:             item.Volunteer.ID,
 			UserID:         item.Volunteer.UserID,
+			VIS:            item.Volunteer.VISID,
 			IndonesianName: item.Volunteer.IndonesianName,
 			MandarinName:   item.Volunteer.MandarinName,
 			Phone:          item.Volunteer.Phone,

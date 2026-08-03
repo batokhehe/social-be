@@ -77,6 +77,8 @@ func mapExpenseError(c *gin.Context, err error, code, message string) {
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "category not found"))
 	case errors.Is(err, ErrCategoryInactive):
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "category is inactive"))
+	case errors.Is(err, ErrMasterAreaNotFound):
+		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "master area not found"))
 	case errors.Is(err, ErrVolunteerNotFound):
 		response.AbortError(c, apperror.New(http.StatusBadRequest, apperror.CodeInvalidParam, "volunteer not found"))
 	case errors.Is(err, ErrInvalidExpenseDate):
@@ -91,7 +93,7 @@ func mapExpenseError(c *gin.Context, err error, code, message string) {
 
 // GetAll godoc
 // @Summary Get all expenses
-// @Description Paginated list of expenses. Supports filter (status, category_id, volunteer_id, expense_date_from/to), search (expense_no, description) and sort (sort=expense_date|amount|created_at|expense_no|status, order=asc|desc).
+// @Description Paginated list of expenses. Supports filter (status, master_area_id, category_id, expense_date_from/to), search (expense_no, description) and sort (sort=expense_date|amount|created_at|expense_no|status, order=asc|desc). Note: volunteer_id (optional PIC) is not a supported filter -- the shared filter helper maps scalar columns only.
 // @Tags expense
 // @Produce json
 // @Security BearerAuth
@@ -131,7 +133,7 @@ func (h *Handler) GetAll(c *gin.Context) {
 
 // GetByID godoc
 // @Summary Get expense by ID
-// @Description Get expense detail with category, volunteer and audit actors
+// @Description Get expense detail with master area (owner), category, optional PIC volunteer and audit actors
 // @Tags expense
 // @Produce json
 // @Security BearerAuth

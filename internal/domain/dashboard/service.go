@@ -82,9 +82,26 @@ func (s *Service) GetHome(ctx context.Context) (*HomeResponse, error) {
 	now := s.now()
 	currStart := firstOfMonth(now)
 	nextStart := currStart.AddDate(0, 1, 0)
+	sixStart := currStart.AddDate(0, -5, 0) // 6 months including the current one
+
 	impact, err := s.Repo.ImpactSummary(ctx, now, currStart, nextStart)
 	if err != nil {
 		return nil, err
+	}
+
+	trendRows, err := s.Repo.HomeTrends(ctx, sixStart, nextStart)
+	if err != nil {
+		return nil, err
+	}
+	byMonth := map[string]map[string]float64{
+		trendSourceVolunteer: {},
+		trendSourceDonor:     {},
+		trendSourceDonation:  {},
+	}
+	for _, row := range trendRows {
+		if bucket, ok := byMonth[row.Source]; ok {
+			bucket[row.YM] = row.Total
+		}
 	}
 
 	return &HomeResponse{
@@ -92,7 +109,21 @@ func (s *Service) GetHome(ctx context.Context) (*HomeResponse, error) {
 		LatestDonations:   orEmpty(latest),
 		TopVolunteers:     orEmpty(top),
 		ImpactSummary:     impact,
+		VolunteerTrend:    buildTrend(sixStart, byMonth[trendSourceVolunteer]),
+		DonorTrend:        buildTrend(sixStart, byMonth[trendSourceDonor]),
+		DonationTrend:     buildTrend(sixStart, byMonth[trendSourceDonation]),
 	}, nil
+}
+
+// buildTrend produces exactly 6 ascending monthly points starting at sixStart,
+// filling months without data with zero.
+func buildTrend(sixStart time.Time, totals map[string]float64) []TrendPoint {
+	points := make([]TrendPoint, 0, 6)
+	for i := 0; i < 6; i++ {
+		key := sixStart.AddDate(0, i, 0).Format("2006-01")
+		points = append(points, TrendPoint{Month: key, Total: totals[key]})
+	}
+	return points
 }
 
 // GetDonationsByCategory returns the current-month donation-by-category pie

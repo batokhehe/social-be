@@ -16,6 +16,7 @@ import (
 var (
 	ErrCategoryNotFound   = errors.New("category not found")
 	ErrCategoryInactive   = errors.New("category is inactive")
+	ErrMasterAreaNotFound = errors.New("master area not found")
 	ErrVolunteerNotFound  = errors.New("volunteer not found")
 	ErrExpenseNotFound    = errors.New("expense not found")
 	ErrInvalidExpenseDate = errors.New("expense_date must be a valid date/time")
@@ -51,20 +52,21 @@ func NewGormRepository(db *gorm.DB, logger *logrus.Logger) Repository {
 }
 
 type expenseModel struct {
-	ID          int        `gorm:"column:id"`
-	ExpenseNo   string     `gorm:"column:expense_no"`
-	ExpenseDate time.Time  `gorm:"column:expense_date"`
-	CategoryID  int        `gorm:"column:category_id"`
-	VolunteerID int        `gorm:"column:volunteer_id"`
-	Amount      float64    `gorm:"column:amount"`
-	Description string     `gorm:"column:description"`
-	Status      string     `gorm:"column:status"`
-	CreatedBy   *int       `gorm:"column:created_by"`
-	UpdatedBy   *int       `gorm:"column:updated_by"`
-	DeletedBy   *int       `gorm:"column:deleted_by"`
-	CreatedAt   time.Time  `gorm:"column:created_at"`
-	UpdatedAt   time.Time  `gorm:"column:updated_at"`
-	DeletedAt   *time.Time `gorm:"column:deleted_at"`
+	ID           int        `gorm:"column:id"`
+	ExpenseNo    string     `gorm:"column:expense_no"`
+	ExpenseDate  time.Time  `gorm:"column:expense_date"`
+	MasterAreaID int        `gorm:"column:master_area_id"`
+	CategoryID   int        `gorm:"column:category_id"`
+	VolunteerID  *int       `gorm:"column:volunteer_id"`
+	Amount       float64    `gorm:"column:amount"`
+	Description  string     `gorm:"column:description"`
+	Status       string     `gorm:"column:status"`
+	CreatedBy    *int       `gorm:"column:created_by"`
+	UpdatedBy    *int       `gorm:"column:updated_by"`
+	DeletedBy    *int       `gorm:"column:deleted_by"`
+	CreatedAt    time.Time  `gorm:"column:created_at"`
+	UpdatedAt    time.Time  `gorm:"column:updated_at"`
+	DeletedAt    *time.Time `gorm:"column:deleted_at"`
 }
 
 func (expenseModel) TableName() string { return "expenses" }
@@ -72,7 +74,8 @@ func (expenseModel) TableName() string { return "expenses" }
 func toEntity(row expenseModel) Expense {
 	return Expense{
 		ID: row.ID, ExpenseNo: row.ExpenseNo, ExpenseDate: row.ExpenseDate,
-		CategoryID: row.CategoryID, VolunteerID: row.VolunteerID, Amount: row.Amount,
+		MasterAreaID: row.MasterAreaID, CategoryID: row.CategoryID,
+		VolunteerID: row.VolunteerID, Amount: row.Amount,
 		Description: row.Description, Status: row.Status,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
@@ -138,10 +141,43 @@ func ensureCategory(tx *gorm.DB, id int) error {
 	return nil
 }
 
-func ensureVolunteer(tx *gorm.DB, id int) error {
+// isExpenseValidationError reports whether err is a client-input problem rather
+// than an unexpected failure (so it is not logged as a repository error).
+func isExpenseValidationError(err error) bool {
+	return errors.Is(err, ErrMasterAreaNotFound) ||
+		errors.Is(err, ErrCategoryNotFound) ||
+		errors.Is(err, ErrCategoryInactive) ||
+		errors.Is(err, ErrVolunteerNotFound)
+}
+
+// ensureMasterArea validates expense ownership: the area must exist and be live.
+// This is the ONLY ownership check -- the PIC volunteer plays no part in it.
+func ensureMasterArea(tx *gorm.DB, id int) error {
 	var exists bool
 	if err := tx.Raw(
-		`SELECT EXISTS(SELECT 1 FROM volunteers WHERE id = ? AND deleted_at IS NULL)`, id,
+		`SELECT EXISTS(SELECT 1 FROM master_areas WHERE id = ? AND deleted_at IS NULL)`, id,
+	).Scan(&exists).Error; err != nil {
+		return err
+	}
+	if !exists {
+		return ErrMasterAreaNotFound
+	}
+	return nil
+}
+
+// ensureVolunteer validates the optional PIC. A nil id means "no PIC" and is
+// skipped.
+//
+// Business rule: the PIC may belong to ANY Master Area. This function therefore
+// checks existence only and deliberately does not receive the expense's
+// master_area_id -- there is no area-equality check, and none must be added.
+func ensureVolunteer(tx *gorm.DB, id *int) error {
+	if id == nil {
+		return nil
+	}
+	var exists bool
+	if err := tx.Raw(
+		`SELECT EXISTS(SELECT 1 FROM volunteers WHERE id = ? AND deleted_at IS NULL)`, *id,
 	).Scan(&exists).Error; err != nil {
 		return err
 	}
@@ -159,6 +195,9 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 
 	var newID int
 	err = r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := ensureMasterArea(tx, req.MasterAreaID); err != nil {
+			return err
+		}
 		if err := ensureCategory(tx, req.CategoryID); err != nil {
 			return err
 		}
@@ -171,8 +210,9 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 		}
 		row := expenseModel{
 			ExpenseNo: expenseNo, ExpenseDate: expenseDate,
-			CategoryID: req.CategoryID, VolunteerID: req.VolunteerID,
-			Amount: req.Amount, Description: req.Description, Status: req.Status,
+			MasterAreaID: req.MasterAreaID, CategoryID: req.CategoryID,
+			VolunteerID: req.VolunteerID,
+			Amount:      req.Amount, Description: req.Description, Status: req.Status,
 			CreatedBy: &actorID, UpdatedBy: &actorID,
 		}
 		if err := tx.Create(&row).Error; err != nil {
@@ -182,7 +222,7 @@ func (r *GormRepository) Create(ctx context.Context, req CreateRequest, actorID 
 		return nil
 	})
 	if err != nil {
-		if !errors.Is(err, ErrCategoryNotFound) && !errors.Is(err, ErrCategoryInactive) && !errors.Is(err, ErrVolunteerNotFound) {
+		if !isExpenseValidationError(err) {
 			r.Logger.WithError(err).Error("Create Expense failed")
 		}
 		return nil, err
@@ -213,7 +253,7 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 	items := make([]ExpenseListItem, 0, len(rows))
 	for _, row := range rows {
 		items = append(items, ExpenseListItem{
-			ID: row.ID, ExpenseNo: row.ExpenseNo, ExpenseDate: row.ExpenseDate,
+			ID: row.ID, ExpenseNo: row.ExpenseNo, ExpenseDate: row.ExpenseDate, Description: row.Description,
 			Amount: row.Amount, Status: row.Status, CreatedAt: row.CreatedAt,
 		})
 	}
@@ -224,32 +264,47 @@ func (r *GormRepository) GetPaginated(ctx context.Context, page pagination.Query
 	return items, total, nil
 }
 
-// fillListNames resolves category + volunteer names in two batched queries
-// (no N+1), then maps them onto the list items by id.
+// fillListNames resolves area + category + optional PIC names in batched queries
+// (no N+1), then maps them onto the list items by id. The volunteer lookup is
+// skipped entirely when no row in the page has a PIC.
 func (r *GormRepository) fillListNames(ctx context.Context, rows []expenseModel, items []ExpenseListItem) error {
 	if len(rows) == 0 {
 		return nil
 	}
 
+	areaIDs := make([]int, 0, len(rows))
 	categoryIDs := make([]int, 0, len(rows))
 	volunteerIDs := make([]int, 0, len(rows))
 	for _, row := range rows {
+		areaIDs = append(areaIDs, row.MasterAreaID)
 		categoryIDs = append(categoryIDs, row.CategoryID)
-		volunteerIDs = append(volunteerIDs, row.VolunteerID)
+		if row.VolunteerID != nil {
+			volunteerIDs = append(volunteerIDs, *row.VolunteerID)
+		}
 	}
 
+	areaNames, err := r.namesByID(ctx, "master_areas", "name", areaIDs)
+	if err != nil {
+		return err
+	}
 	categoryNames, err := r.namesByID(ctx, "master_expense_categories", "name", categoryIDs)
 	if err != nil {
 		return err
 	}
-	volunteerNames, err := r.namesByID(ctx, "volunteers", "indonesian_name", volunteerIDs)
-	if err != nil {
-		return err
+	volunteerNames := map[int]string{}
+	if len(volunteerIDs) > 0 {
+		volunteerNames, err = r.namesByID(ctx, "volunteers", "indonesian_name", volunteerIDs)
+		if err != nil {
+			return err
+		}
 	}
 
 	for i, row := range rows {
+		items[i].AreaName = areaNames[row.MasterAreaID]
 		items[i].CategoryName = categoryNames[row.CategoryID]
-		items[i].VolunteerName = volunteerNames[row.VolunteerID]
+		if row.VolunteerID != nil {
+			items[i].VolunteerName = volunteerNames[*row.VolunteerID]
+		}
 	}
 	return nil
 }
@@ -287,6 +342,9 @@ func (r *GormRepository) GetByID(ctx context.Context, id int) (*Expense, error) 
 	}
 
 	item := toEntity(row)
+	if err := r.loadMasterArea(ctx, &item); err != nil {
+		return nil, err
+	}
 	if err := r.loadCategory(ctx, &item); err != nil {
 		return nil, err
 	}
@@ -297,6 +355,24 @@ func (r *GormRepository) GetByID(ctx context.Context, id int) (*Expense, error) 
 		return nil, err
 	}
 	return &item, nil
+}
+
+// loadMasterArea resolves the owning area. No deleted_at filter (see namesByID):
+// a historical expense keeps showing its area even if the area is deactivated.
+func (r *GormRepository) loadMasterArea(ctx context.Context, item *Expense) error {
+	var area MasterAreaInfo
+	if err := r.DB.WithContext(ctx).
+		Table("master_areas").
+		Select("id", "name", "location").
+		Where("id = ?", item.MasterAreaID).
+		Take(&area).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return fmt.Errorf("failed load expense master area: %w", err)
+	}
+	item.MasterArea = &area
+	return nil
 }
 
 func (r *GormRepository) loadCategory(ctx context.Context, item *Expense) error {
@@ -315,14 +391,18 @@ func (r *GormRepository) loadCategory(ctx context.Context, item *Expense) error 
 	return nil
 }
 
+// loadVolunteer resolves the optional PIC; a nil volunteer_id means no PIC.
 func (r *GormRepository) loadVolunteer(ctx context.Context, item *Expense) error {
+	if item.VolunteerID == nil {
+		return nil
+	}
 	var vol VolunteerInfo
 	// No deleted_at filter (see namesByID): keep resolving the volunteer on a
 	// historical expense even after the volunteer is deactivated.
 	if err := r.DB.WithContext(ctx).
 		Table("volunteers").
 		Select("id", "indonesian_name", "master_area_id").
-		Where("id = ?", item.VolunteerID).
+		Where("id = ?", *item.VolunteerID).
 		Take(&vol).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil
@@ -384,6 +464,9 @@ func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, 
 	}
 
 	err = r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := ensureMasterArea(tx, req.MasterAreaID); err != nil {
+			return err
+		}
 		if err := ensureCategory(tx, req.CategoryID); err != nil {
 			return err
 		}
@@ -392,14 +475,15 @@ func (r *GormRepository) Update(ctx context.Context, id int, req UpdateRequest, 
 		}
 		// expense_no is immutable and intentionally not updated.
 		result := tx.Model(&expenseModel{}).Where("id = ? AND deleted_at IS NULL", id).Updates(map[string]any{
-			"expense_date": expenseDate,
-			"category_id":  req.CategoryID,
-			"volunteer_id": req.VolunteerID,
-			"amount":       req.Amount,
-			"description":  req.Description,
-			"status":       req.Status,
-			"updated_by":   actorID,
-			"updated_at":   time.Now(),
+			"expense_date":   expenseDate,
+			"master_area_id": req.MasterAreaID,
+			"category_id":    req.CategoryID,
+			"volunteer_id":   req.VolunteerID,
+			"amount":         req.Amount,
+			"description":    req.Description,
+			"status":         req.Status,
+			"updated_by":     actorID,
+			"updated_at":     time.Now(),
 		})
 		if result.Error != nil {
 			return result.Error

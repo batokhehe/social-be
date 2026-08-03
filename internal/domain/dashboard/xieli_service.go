@@ -19,10 +19,11 @@ func NewXieLiService(resolver *ScopeResolver, repo AreaRepository) *XieLiService
 }
 
 func (s *XieLiService) GetDashboard(ctx context.Context, userID int) (*AreaDashboardResponse, error) {
-	ids, err := s.Resolver.ResolveXieLiVolunteerIDs(ctx, userID)
+	scope, err := s.Resolver.ResolveXieLiScope(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+	ids := scope.VolunteerIDs
 
 	now := s.now()
 	currStart := firstOfMonth(now)
@@ -54,7 +55,8 @@ func (s *XieLiService) GetDashboard(ctx context.Context, userID int) (*AreaDashb
 		if err != nil {
 			return nil, err
 		}
-		expenses, err := s.Repo.SumExpenses(ctx, ids, monthStart, monthEnd)
+		// Expenses are per-area only: the logged-in user's master area, no subtree.
+		expenses, err := s.Repo.SumExpenses(ctx, scope.MasterAreaID, monthStart, monthEnd)
 		if err != nil {
 			return nil, err
 		}

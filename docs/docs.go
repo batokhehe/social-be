@@ -1138,7 +1138,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Paginated list of expenses. Supports filter (status, category_id, volunteer_id, expense_date_from/to), search (expense_no, description) and sort (sort=expense_date|amount|created_at|expense_no|status, order=asc|desc).",
+                "description": "Paginated list of expenses. Supports filter (status, master_area_id, category_id, expense_date_from/to), search (expense_no, description) and sort (sort=expense_date|amount|created_at|expense_no|status, order=asc|desc). Note: volunteer_id (optional PIC) is not a supported filter -- the shared filter helper maps scalar columns only.",
                 "produces": [
                     "application/json"
                 ],
@@ -1228,7 +1228,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get expense detail with category, volunteer and audit actors",
+                "description": "Get expense detail with master area (owner), category, optional PIC volunteer and audit actors",
                 "produces": [
                     "application/json"
                 ],
@@ -4912,8 +4912,8 @@ const docTemplate = `{
             "required": [
                 "category_id",
                 "expense_date",
-                "status",
-                "volunteer_id"
+                "master_area_id",
+                "status"
             ],
             "properties": {
                 "amount": {
@@ -4930,6 +4930,10 @@ const docTemplate = `{
                 "expense_date": {
                     "type": "string"
                 },
+                "master_area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "status": {
                     "type": "string",
                     "enum": [
@@ -4939,6 +4943,7 @@ const docTemplate = `{
                     ]
                 },
                 "volunteer_id": {
+                    "description": "VolunteerID is the optional PIC. Validated for existence only -- its own\nmaster area is irrelevant and is never matched against MasterAreaID.",
                     "type": "integer",
                     "minimum": 1
                 }
@@ -4949,8 +4954,8 @@ const docTemplate = `{
             "required": [
                 "category_id",
                 "expense_date",
-                "status",
-                "volunteer_id"
+                "master_area_id",
+                "status"
             ],
             "properties": {
                 "amount": {
@@ -4967,6 +4972,10 @@ const docTemplate = `{
                 "expense_date": {
                     "type": "string"
                 },
+                "master_area_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "status": {
                     "type": "string",
                     "enum": [
@@ -4976,6 +4985,7 @@ const docTemplate = `{
                     ]
                 },
                 "volunteer_id": {
+                    "description": "VolunteerID is the optional PIC. Validated for existence only -- its own\nmaster area is irrelevant and is never matched against MasterAreaID.",
                     "type": "integer",
                     "minimum": 1
                 }

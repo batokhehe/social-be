@@ -19,10 +19,11 @@ func NewHuAiService(resolver *ScopeResolver, repo AreaRepository) *HuAiService {
 }
 
 func (s *HuAiService) GetDashboard(ctx context.Context, userID int) (*AreaDashboardResponse, error) {
-	ids, err := s.Resolver.ResolveHuAiVolunteerIDs(ctx, userID)
+	scope, err := s.Resolver.ResolveHuAiScope(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+	ids := scope.VolunteerIDs
 
 	now := s.now()
 	currStart := firstOfMonth(now)
@@ -54,7 +55,8 @@ func (s *HuAiService) GetDashboard(ctx context.Context, userID int) (*AreaDashbo
 		if err != nil {
 			return nil, err
 		}
-		expenses, err := s.Repo.SumExpenses(ctx, ids, monthStart, monthEnd)
+		// Expenses are per-area only: the logged-in user's master area, no subtree.
+		expenses, err := s.Repo.SumExpenses(ctx, scope.MasterAreaID, monthStart, monthEnd)
 		if err != nil {
 			return nil, err
 		}

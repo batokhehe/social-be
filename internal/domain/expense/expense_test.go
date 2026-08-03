@@ -54,7 +54,10 @@ func newRouter(h *Handler) *gin.Engine {
 	return r
 }
 
-const validBody = `{"expense_date":"2026-07-06","category_id":1,"volunteer_id":2,"amount":150000,"description":"beli ATK","status":"draft"}`
+const validBody = `{"expense_date":"2026-07-06","master_area_id":3,"category_id":1,"volunteer_id":2,"amount":150000,"description":"beli ATK","status":"draft"}`
+
+// bodyNoPIC omits volunteer_id entirely: an expense may exist without a PIC.
+const bodyNoPIC = `{"expense_date":"2026-07-06","master_area_id":3,"category_id":1,"amount":150000,"description":"beli ATK","status":"draft"}`
 
 func do(r *gin.Engine, method, target, body string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
@@ -112,8 +115,123 @@ func TestCreate_Success(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d (%s)", w.Code, w.Body.String())
 	}
-	if captured.CategoryID != 1 || captured.VolunteerID != 2 || captured.Amount != 150000 {
+	if captured.MasterAreaID != 3 || captured.CategoryID != 1 || captured.Amount != 150000 {
 		t.Fatalf("request not passed through: %+v", captured)
+	}
+	if captured.VolunteerID == nil || *captured.VolunteerID != 2 {
+		t.Fatalf("PIC volunteer not passed through: %+v", captured.VolunteerID)
+	}
+}
+
+// An expense may exist without a PIC: volunteer_id omitted must still succeed.
+func TestCreate_WithoutPIC_Success(t *testing.T) {
+	var captured CreateRequest
+	repo := &mockRepo{createFn: func(ctx context.Context, req CreateRequest, actorID int) (*Expense, error) {
+		captured = req
+		return &Expense{ID: 6, ExpenseNo: "EXP-202607-00002", MasterAreaID: req.MasterAreaID}, nil
+	}}
+	h := &Handler{Service: NewService(repo)}
+	w := do(newRouter(h), http.MethodPost, "/expenses", bodyNoPIC)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 without PIC, got %d (%s)", w.Code, w.Body.String())
+	}
+	if captured.VolunteerID != nil {
+		t.Fatalf("expected nil PIC, got %v", *captured.VolunteerID)
+	}
+	if captured.MasterAreaID != 3 {
+		t.Fatalf("master_area_id = %d, want 3", captured.MasterAreaID)
+	}
+}
+
+// bodyCrossAreaPIC owns the expense in area 3 while the PIC volunteer (id 2)
+// belongs to a different area. This MUST be accepted.
+const bodyCrossAreaPIC = `{"expense_date":"2026-07-06","master_area_id":3,"category_id":1,"volunteer_id":2,"amount":150000,"status":"draft"}`
+
+// Business rule: ownership is master_area_id only; the PIC may belong to ANY
+// Master Area. No validation may reject a PIC from a different area.
+func TestCreate_CrossAreaPIC_Allowed(t *testing.T) {
+	var captured CreateRequest
+	repo := &mockRepo{createFn: func(ctx context.Context, req CreateRequest, actorID int) (*Expense, error) {
+		captured = req
+		// PIC volunteer 2 lives in area 99, the expense is owned by area 3.
+		return &Expense{
+			ID:           7,
+			ExpenseNo:    "EXP-202607-00003",
+			MasterAreaID: req.MasterAreaID,
+			VolunteerID:  req.VolunteerID,
+			MasterArea:   &MasterAreaInfo{ID: 3, Name: "Area Tiga"},
+			Volunteer:    &VolunteerInfo{ID: 2, IndonesianName: "Budi", MasterAreaID: 99},
+		}, nil
+	}}
+	h := &Handler{Service: NewService(repo)}
+	w := do(newRouter(h), http.MethodPost, "/expenses", bodyCrossAreaPIC)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("cross-area PIC must be accepted, got %d (%s)", w.Code, w.Body.String())
+	}
+	if captured.MasterAreaID != 3 || captured.VolunteerID == nil || *captured.VolunteerID != 2 {
+		t.Fatalf("both values must reach the repository unchanged: %+v", captured)
+	}
+
+	// The response must carry the two divergent areas side by side.
+	var env struct {
+		Data Expense `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &env); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if env.Data.MasterAreaID != 3 {
+		t.Fatalf("expense master_area_id = %d, want 3", env.Data.MasterAreaID)
+	}
+	if env.Data.Volunteer == nil || env.Data.Volunteer.MasterAreaID != 99 {
+		t.Fatalf("PIC area must be independent of the expense area: %+v", env.Data.Volunteer)
+	}
+	if env.Data.MasterAreaID == env.Data.Volunteer.MasterAreaID {
+		t.Fatalf("test is not exercising a cross-area PIC")
+	}
+}
+
+// The same rule applies on update: reassigning to a PIC from another area is OK.
+func TestUpdate_CrossAreaPIC_Allowed(t *testing.T) {
+	var captured UpdateRequest
+	repo := &mockRepo{updateFn: func(ctx context.Context, id int, req UpdateRequest, actorID int) (*Expense, error) {
+		captured = req
+		return &Expense{ID: id, MasterAreaID: req.MasterAreaID, VolunteerID: req.VolunteerID}, nil
+	}}
+	h := &Handler{Service: NewService(repo)}
+	w := do(newRouter(h), http.MethodPut, "/expenses/7", bodyCrossAreaPIC)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("cross-area PIC must be accepted on update, got %d (%s)", w.Code, w.Body.String())
+	}
+	if captured.MasterAreaID != 3 || captured.VolunteerID == nil || *captured.VolunteerID != 2 {
+		t.Fatalf("both values must reach the repository unchanged: %+v", captured)
+	}
+}
+
+// master_area_id is the ownership field and is required.
+func TestCreate_MissingMasterArea_400(t *testing.T) {
+	repo := &mockRepo{createFn: func(ctx context.Context, req CreateRequest, actorID int) (*Expense, error) {
+		t.Fatalf("repo must not be called on validation failure")
+		return nil, nil
+	}}
+	h := &Handler{Service: NewService(repo)}
+	body := `{"expense_date":"2026-07-06","category_id":1,"amount":150000,"status":"draft"}`
+	w := do(newRouter(h), http.MethodPost, "/expenses", body)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing master_area_id, got %d", w.Code)
+	}
+}
+
+func TestCreate_MasterAreaNotFound_400(t *testing.T) {
+	repo := &mockRepo{createFn: func(ctx context.Context, req CreateRequest, actorID int) (*Expense, error) {
+		return nil, ErrMasterAreaNotFound
+	}}
+	h := &Handler{Service: NewService(repo)}
+	w := do(newRouter(h), http.MethodPost, "/expenses", validBody)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for unknown master area, got %d", w.Code)
 	}
 }
 
@@ -123,7 +241,7 @@ func TestCreate_InvalidStatus_400(t *testing.T) {
 		return nil, nil
 	}}
 	h := &Handler{Service: NewService(repo)}
-	body := `{"expense_date":"2026-07-06","category_id":1,"volunteer_id":2,"amount":150000,"status":"approved"}`
+	body := `{"expense_date":"2026-07-06","master_area_id":3,"category_id":1,"volunteer_id":2,"amount":150000,"status":"approved"}`
 	w := do(newRouter(h), http.MethodPost, "/expenses", body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for invalid status, got %d", w.Code)
@@ -136,7 +254,7 @@ func TestCreate_ZeroAmount_400(t *testing.T) {
 		return nil, nil
 	}}
 	h := &Handler{Service: NewService(repo)}
-	body := `{"expense_date":"2026-07-06","category_id":1,"volunteer_id":2,"amount":0,"status":"draft"}`
+	body := `{"expense_date":"2026-07-06","master_area_id":3,"category_id":1,"volunteer_id":2,"amount":0,"status":"draft"}`
 	w := do(newRouter(h), http.MethodPost, "/expenses", body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for zero amount, got %d", w.Code)

@@ -35,9 +35,10 @@ type AreaRepository interface {
 	VolunteerStatusCounts(ctx context.Context, volunteerIDs []int) (active int64, total int64, err error)
 	CountDonors(ctx context.Context, volunteerIDs []int, from, to time.Time) (int64, error)
 	SumDonations(ctx context.Context, volunteerIDs []int, from, to time.Time) (float64, error)
-	// SumExpenses sums expenses (status != cancelled) for the scope volunteers,
-	// by expense_date over [from, to).
-	SumExpenses(ctx context.Context, volunteerIDs []int, from, to time.Time) (float64, error)
+	// SumExpenses sums expenses (status != cancelled) owned by ONE master area,
+	// by expense_date over [from, to). Expenses belong to a master area directly,
+	// and expense aggregation is per-area only -- descendants are excluded.
+	SumExpenses(ctx context.Context, masterAreaID int, from, to time.Time) (float64, error)
 }
 
 type AreaGormRepository struct {
@@ -205,8 +206,8 @@ WHERE d.deleted_at IS NULL
 	return sum, err
 }
 
-func (r *AreaGormRepository) SumExpenses(ctx context.Context, volunteerIDs []int, from, to time.Time) (float64, error) {
-	if len(volunteerIDs) == 0 {
+func (r *AreaGormRepository) SumExpenses(ctx context.Context, masterAreaID int, from, to time.Time) (float64, error) {
+	if masterAreaID == 0 {
 		return 0, nil
 	}
 	const q = `
@@ -214,11 +215,11 @@ SELECT COALESCE(SUM(amount), 0)
 FROM expenses
 WHERE deleted_at IS NULL
     AND status <> 'cancelled'
-    AND volunteer_id IN ?
+    AND master_area_id = ?
     AND expense_date >= ? AND expense_date < ?`
 
 	var sum float64
-	err := r.DB.WithContext(ctx).Raw(q, volunteerIDs, from, to).Scan(&sum).Error
+	err := r.DB.WithContext(ctx).Raw(q, masterAreaID, from, to).Scan(&sum).Error
 	return sum, err
 }
 
